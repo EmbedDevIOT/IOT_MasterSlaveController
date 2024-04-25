@@ -1,0 +1,28 @@
+{
+   "sn": 0,
+   "firmware":"1.0",
+
+   "ssid": "0840-0",
+   "pass": "retra0840zxc",
+   "ip1": 192,
+   "ip2": 168,
+   "ip3": 1,
+   "ip4": 1,
+
+   "carname": "Вагон",
+   "carnum": 7,
+   "hide": 0,
+   "infotext": "Москва-Рязань-Самара-Оренбург-Исатай-Макат-Жаслык-Мискин-Ташкент",
+   "runtext": 1,
+   "speed": 20,
+   "c_carnum" : 6,
+   "c_infotext" : 5,
+   "c_time" : 5,
+   "c_date" : 5,
+   "c_tempin" : 1,
+   "c_tempout" : 2,
+   
+   "t1_offset": 0,
+   "t2_offset": 0,
+   "br": 90
+}

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="EmbedDev">
+    <title>Комбинации кнопок табло 0840 (Wi-Fi GUI)</title>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/reset.css?v=2.1">
+    <link rel="stylesheet" href="css/style.css?v=2.1">
+    <script src='js/server.js'></script>
+</head>
+
+<body onload="StartInfo()">
+    <header>
+        <div class="container-sm">
+            <div class="row">
+                <div>
+                    <h2 class="title">
+                        Настройка табло Вагона-Ресторана (Wi-Fi GUI) v1.0
+                        <p>Здесь вы можете посмотреть, как управлять табло кнопками, когда нет возможности сделать это через Wi-Fi. Рекомендуем сделать скриншот.<br /><br />
+                        Кнопки имеют нумерацию 1~5 (всего 5 шт), слева направо, если смотреть на экран табло.</p>
+                        
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+    
+    
+<table align="center" border="1" cellpadding="1" cellspacing="1" style="width:95%">
+	<caption>Комбинации кнопок</caption>
+	<thead>
+		<tr>
+			<th scope="col"><em>Результат</em></th>
+			<th scope="col"><em>Что нажимать</em></th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Час +</td>
+			<td>однократно кн.5 (самая правая)</td>
+		</tr>
+		<tr>
+			<td>Час -</td>
+			<td>однократно кн.1 (самая левая)</td>
+		</tr>
+		<tr>
+			<td>Номер вагона +</td>
+			<td>однократно кн.4</td>
+		</tr>
+		<tr>
+			<td>Номер вагона -</td>
+			<td>однократно кн.2</td>
+		</tr>
+		<tr>
+			<td>Минута +</td>
+			<td>зажать кн.3 + нажимать кн.4</td>
+		</tr>
+		<tr>
+			<td>Минута -</td>
+			<td>зажать кн.3 + нажимать кн.2</td>
+		</tr>
+		<tr>
+			<td>День +</td>
+			<td>зажать кн.3 + нажимать кн.5</td>
+		</tr>
+		<tr>
+			<td>День -</td>
+			<td>зажать кн.3 + нажимать кн.1</td>
+		</tr>
+		<tr>
+			<td>Месяц +</td>
+			<td>зажать кн.4 + нажимать кн.5</td>
+		</tr>
+		<tr>
+			<td>Месяц -</td>
+			<td>зажать кн.2 + нажимать кн.1</td>
+		</tr>
+		<tr>
+			<td>Год +</td>
+			<td>зажать кн.5 на 5-9 сек</td>
+		</tr>
+		<tr>
+			<td>Год -</td>
+			<td>зажать кн.1 на 5-9 сек</td>
+		</tr>
+		<tr>
+			<td>Сбросить бегущее текстовое сообщение снизу</td>
+			<td>зажать кн.2 + кн.4 на 10сек</td>
+		</tr>
+		<tr>
+			<td>Отключить Wi-Fi</td>
+			<td>зажать кн.1 + кн.2 на 10сек</td>
+		</tr>
+		<tr>
+			<td>Включить Wi-Fi</td>
+			<td>зажать кн.5 + кн.4 на 10 сек</td>
+		</tr>
+		<tr>
+			<td>Полный сброс всех настроек (включая настройки доступа по Wi-Fi)</td>
+			<td>зажать кн.1 + кн.5 на 20сек</td>
+		</tr>
+	</tbody>
+</table>
+
+<p>&nbsp;</p>
+
+
+
+
+    
+    
+    
+        <div>
+            <a href="index.html" class="but but_link" type="button" style="background: #1D6F74"> Вернуться на главную страницу </a>
+        </div>
+    </main>
+
+
+    <div class="footer">
+        <div>
+            <a href="https://retra.pro/" class="text-white">ООО «РЭТРА»</a>, 2024
+        </div>
+        S/N:
+        <output class="text-white" id="sn" value="NA"> </output>
+        F/W:
+        <output class="text-white" id="firmware" value="NA"></output>
+        
+    </div>
+
+</body>
+
+</html>
