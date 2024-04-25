@@ -62,6 +62,7 @@
 #define TX1_PIN 33 // UART1_TX
 #define RX1_PIN 32 // UART1_RX
 #endif
+#define DE_RE 25   // DE_MAX13444
 
 // UART 2 
 #define GPS_SERIAL2
@@ -69,7 +70,6 @@
 #define TX2_PIN 17 // UART2_TX
 #define RX2_PIN 16 // UART2_RX
 #endif
-#define DE_RE 25   // DE_MAX13444
 
 
 //=======================================================================
@@ -108,8 +108,8 @@ struct GlobalConfig
   String chipID = "";
   String MacAdr = "";
   String NTPServer = "pool.ntp.org";
-  String APSSID = "0846-15";
-  String APPAS = "retra0846zxc";
+  String APSSID = "0845-0";
+  String APPAS = "retra0845zxc";
 
   String Ssid = "MkT";           // SSID Wifi network
   String Password = "QFCxfXMA3"; // Passwords WiFi network
