@@ -62,7 +62,7 @@
 #define TX1_PIN 33 // UART1_TX
 #define RX1_PIN 32 // UART1_RX
 #endif
-#define DE_RE 25   // DE_MAX13444
+#define DE_RE 35   // DE_MAX13444
 
 // UART 2 
 #define GPS_SERIAL2
