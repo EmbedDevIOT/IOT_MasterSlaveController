@@ -47,6 +47,7 @@ void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void GetDSData(void);
 void UART_Recieve_Data();
+void SayTimeData();
 //=======================================================================
 
 //=======================================================================
@@ -145,6 +146,7 @@ void setup()
 
     // HTTPinit(); // HTTP server initialisation
     // delay(1000);
+    SayTimeData();
 
     xTaskCreatePinnedToCore(
         HandlerCore0,
@@ -232,7 +234,7 @@ void ButtonHandler()
 void UART_Recieve_Data()
 {
     if (Serial.available())
-    { 
+    {
         // put streamURL in serial monitor
         // audio.stopSong();
         String r = Serial.readString();
@@ -252,4 +254,35 @@ void UART_Recieve_Data()
     }
 }
 
-void T
+void SayTimeData()
+{
+    Amplifier.loop();
+
+    String buf = "/sound/S/curtime.mp3";
+    Clock = RTC.getTime();
+    uint8_t Hour = Clock.hour;
+
+    Amplifier.connecttoFS(SPIFFS, buf.c_str());
+    Amplifier.loop();
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    buf.clear();
+
+    buf = "/sound/H/";
+    buf += "ch";
+    buf += Hour;
+    buf += ".mp3";
+    Amplifier.connecttoFS(SPIFFS, buf.c_str());
+    Amplifier.loop();
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    buf.clear();
+
+    uint8_t Min = Clock.minute;
+    buf = "/sound/M/";
+    buf += "min";
+    buf += Min;
+    buf += ".mp3";
+    Amplifier.connecttoFS(SPIFFS, buf.c_str());
+    Amplifier.loop();
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    buf.clear();
+}
