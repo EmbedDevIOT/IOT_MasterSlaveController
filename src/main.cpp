@@ -1,6 +1,8 @@
 #include "Config.h"
 
 #include "WF.h"
+#include "FileConfig.h"
+#include "HTTP.h"
 
 #define DEBUG // Debug control ON
 //======================================================================
@@ -12,6 +14,7 @@ char umsg[30];      // buffer for user message
 //======================================================================
 
 //================================ OBJECTs =============================
+Audio Amplifier;
 MicroDS3231 RTC;
 
 OneWire oneWire1(T1);
@@ -59,10 +62,26 @@ void HandlerCore0(void *pvParameters)
     for (;;)
     {
         // HandleClient();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        Amplifier.loop();
+        if (Serial.available())
+        { // put streamURL in serial monitor
+            // audio.stopSong();
+            String r = Serial.readString();
+            bool block_st = false;
+            r.trim();
+            if (r.length() > 3)
+            {
+                Amplifier.connecttohost(r.c_str());
+            }
+            else
+            {
+                Amplifier.setVolume(r.toInt());
+            }
+            log_i("free heap=%i", ESP.getFreeHeap());
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+        }
     }
 }
-
 // Pinned to Core 1.
 void HandlerCore1(void *pvParameters)
 {
@@ -82,13 +101,19 @@ void HandlerCore1(void *pvParameters)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.0.1";
-    CFG.fwdate = "25.04.2024";
+    CFG.fw = "0.0.5";
+    CFG.fwdate = "27.04.2024";
 
     Serial.begin(UARTSpeed);
+    // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
     Serial2.begin(RSSpeed);
-
     SystemInit();
+    // SPIFS
+    if (!SPIFFS.begin(true))
+    {
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        return;
+    }
     // RTC INIT
     RTC.begin();
     // Low battery / RTC battery crash / Set time compilations
@@ -110,9 +135,28 @@ void setup()
     pinMode(WC2, INPUT_PULLUP);
 
     // LoadConfig(); // Load configuration from config.json files
-
+    CFG.WiFiMode = 0;
+    WiFi.disconnect();
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(CFG.Ssid.c_str(), CFG.Password.c_str());
+    while (WiFi.status() != WL_CONNECTED)
+        delay(1500);
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+    Serial.println("");
     // WIFIinit();
-    // delay(1000);
+    delay(500);
+
+    Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+    Amplifier.setVolume(10);
+    
+    String buf = "/sound/NM/";
+    buf += "d1.mp3";
+    Amplifier.connecttoFS(SPIFFS, buf.c_str());
+
+    Serial.println(F("DAC PCM Amplifier...Done"));
 
     // HTTPinit(); // HTTP server initialisation
     // delay(1000);

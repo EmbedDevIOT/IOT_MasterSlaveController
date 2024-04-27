@@ -3,13 +3,14 @@
 
 #include <Arduino.h>
 
-// #include <ElegantOTA.h>
+#include <Audio.h>
 #include "HardwareSerial.h"
 #include <WiFi.h>
 #include <WebServer.h>
 #include "SPIFFS.h"
 #include <microDS3231.h>
 #include <ArduinoJson.h>
+// #include <ElegantOTA.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -34,29 +35,23 @@
 #define ON 1
 #define OFF 0
 
-// GPIO PINs
-// Button
-#define BTN1 36 // кнопкa 1
-#define BTN2 39 // кнопкa 2
-#define BTN3 34 // кнопкa 3
-#define BTN4 35 // кнопкa 4
-#define BTN5 32 // кнопкa 5
+//======================    G P I O        =====================
+#define BTN_AI   36
+#define LED_WiFi 33   // Led State WiFi Connection
+#define LED_ST   12   // Status 
 
-// #define CARD 15    // MicroSD set PIN
-// #define AIO 26     // Analog input PIN
-// #define DIO 27     // Digital input PIN
+#define T1 4          // Temperature sensor ds18b20 1
+#define T2 2          // Temperature sensor ds18b20 2
 
-#define LED_RS 12   // Led State RS Connection
-#define LED_WiFi 32 // Led State WiFi Connection
-#define LED_ST 14   // User Led
+#define WC1 39        // Pin status control WC 1
+#define WC2 34        // Pin status control WC 2
 
-#define T1 4 // Temperature sensor ds18b20 1
-#define T2 2 // Temperature sensor ds18b20 2
+// I2S 
+#define I2S_DOUT 23
+#define I2S_BCLK 26
+#define I2S_LRC 25
 
-#define WC1 4 // Pin status control WC 1
-#define WC2 2 // Pin status control WC 2
-
-// UART 1 
+// UART 1  - RS485 -
 #define RS_SERIAL1
 #ifdef RS_SERIAL1
 #define TX1_PIN 33 // UART1_TX
@@ -64,12 +59,13 @@
 #endif
 #define DE_RE 35   // DE_MAX13444
 
-// UART 2 
+// UART 2 - GPS -
 #define GPS_SERIAL2
 #ifdef GPS_SERIAL2
 #define TX2_PIN 17 // UART2_TX
 #define RX2_PIN 16 // UART2_RX
 #endif
+//=======================================================================
 
 
 //=======================================================================
@@ -164,6 +160,7 @@ extern color col_tempout;
 //=======================================================================
 struct HardwareConfig
 {
+  uint8_t volume = 255;
   int8_t bright = 70; // speed running text
   float dsT1 = 0.0;
   int8_t T1_offset = 0;
