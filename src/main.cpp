@@ -46,6 +46,7 @@ UserData UserText;
 void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void GetDSData(void);
+void UART_Recieve_Data();
 //=======================================================================
 
 //=======================================================================
@@ -63,23 +64,7 @@ void HandlerCore0(void *pvParameters)
     {
         // HandleClient();
         Amplifier.loop();
-        if (Serial.available())
-        { // put streamURL in serial monitor
-            // audio.stopSong();
-            String r = Serial.readString();
-            bool block_st = false;
-            r.trim();
-            if (r.length() > 3)
-            {
-                Amplifier.connecttohost(r.c_str());
-            }
-            else
-            {
-                Amplifier.setVolume(r.toInt());
-            }
-            log_i("free heap=%i", ESP.getFreeHeap());
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-        }
+        UART_Recieve_Data();
     }
 }
 // Pinned to Core 1.
@@ -151,10 +136,10 @@ void setup()
 
     Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
     Amplifier.setVolume(10);
-    
-    String buf = "/sound/NM/";
-    buf += "d1.mp3";
-    Amplifier.connecttoFS(SPIFFS, buf.c_str());
+
+    // String buf = "/sound/NM/";
+    // buf += "d1.mp3";
+    // Amplifier.connecttoFS(SPIFFS, buf.c_str());
 
     Serial.println(F("DAC PCM Amplifier...Done"));
 
@@ -243,3 +228,28 @@ void ButtonHandler()
     ESP.restart();
 }
 //=========================================================================
+
+void UART_Recieve_Data()
+{
+    if (Serial.available())
+    { 
+        // put streamURL in serial monitor
+        // audio.stopSong();
+        String r = Serial.readString();
+        bool block_st = false;
+        r.trim();
+        if (r.length() > 3)
+        {
+            // Amplifier.connecttohost(r.c_str());
+            Amplifier.connecttoFS(SPIFFS, r.c_str());
+        }
+        else
+        {
+            Amplifier.setVolume(r.toInt());
+        }
+        log_i("free heap=%i", ESP.getFreeHeap());
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
+void T
