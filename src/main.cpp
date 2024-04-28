@@ -277,7 +277,7 @@ void SayTimeData()
     buf.clear();
 
     uint8_t Min = Clock.minute;
-    buf = "/sound/M/";
+    buf = "/sound/Mi/";
     buf += "min";
     buf += Min;
     buf += ".mp3";

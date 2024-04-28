@@ -36,7 +36,8 @@
 #define OFF 0
 
 //======================    G P I O        =====================
-#define BTN_AI   36
+#define BTN_AI   36   // Analog Keyboard
+
 #define LED_WiFi 33   // Led State WiFi Connection
 #define LED_ST   12   // Status 
 
@@ -46,8 +47,12 @@
 #define WC1 39        // Pin status control WC 1
 #define WC2 34        // Pin status control WC 2
 
+#define SW1 19        // DIP Switch
+#define SW2 18        // DIP Switch 
+
 // I2S 
-#define I2S_DOUT 23
+// #define I2S_DOUT 23
+#define I2S_DOUT 27
 #define I2S_BCLK 26
 #define I2S_LRC 25
 
