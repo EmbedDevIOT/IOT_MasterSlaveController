@@ -47,7 +47,8 @@ void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void GetDSData(void);
 void UART_Recieve_Data();
-void SayTimeData();
+void Tell_me_CurrentTime();
+void Tell_me_DoorState(bool state);
 //=======================================================================
 
 //=======================================================================
@@ -66,6 +67,8 @@ void HandlerCore0(void *pvParameters)
         // HandleClient();
         Amplifier.loop();
         UART_Recieve_Data();
+
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 // Pinned to Core 1.
@@ -77,7 +80,8 @@ void HandlerCore1(void *pvParameters)
     {
         sec_cnt++;
         GetDSData();
-        DebugInfo();
+        // DebugInfo();
+        Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -87,8 +91,8 @@ void HandlerCore1(void *pvParameters)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.0.5";
-    CFG.fwdate = "27.04.2024";
+    CFG.fw = "0.0.6";
+    CFG.fwdate = "11.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -102,6 +106,7 @@ void setup()
     }
     // RTC INIT
     RTC.begin();
+    // RTC.setTime(COMPILE_TIME);
     // Low battery / RTC battery crash / Set time compilations
     if (RTC.lostPower())
     {
@@ -136,7 +141,7 @@ void setup()
     delay(500);
 
     Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-    Amplifier.setVolume(10);
+    Amplifier.setVolume(5);
 
     // String buf = "/sound/NM/";
     // buf += "d1.mp3";
@@ -146,7 +151,7 @@ void setup()
 
     // HTTPinit(); // HTTP server initialisation
     // delay(1000);
-    SayTimeData();
+    // SayTimeData();
 
     xTaskCreatePinnedToCore(
         HandlerCore0,
@@ -243,7 +248,23 @@ void UART_Recieve_Data()
         if (r.length() > 3)
         {
             // Amplifier.connecttohost(r.c_str());
-            Amplifier.connecttoFS(SPIFFS, r.c_str());
+            if (r == "time")
+            {
+                // Amplifier.connecttoFS(SPIFFS, r.c_str());
+                Serial.println("Current Time");
+                Tell_me_CurrentTime();
+                // Amplifier.connecttoFS(SPIFFS, "/sound/S/curtime.mp3");
+            }
+            if (r == "door1")
+            {
+                Serial.println("DoorState");
+                Tell_me_DoorState(true);
+            }
+            if (r == "door0")
+            {
+                Serial.println("DoorState");
+                Tell_me_DoorState(false);
+            }
         }
         else
         {
@@ -254,35 +275,96 @@ void UART_Recieve_Data()
     }
 }
 
-void SayTimeData()
+void Tell_me_CurrentTime()
 {
-    Amplifier.loop();
-
     String buf = "/sound/S/curtime.mp3";
-    Clock = RTC.getTime();
-    uint8_t Hour = Clock.hour;
-
-    Amplifier.connecttoFS(SPIFFS, buf.c_str());
-    Amplifier.loop();
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    // Amplifier.stopSong();
+    // vTaskDelay(50 / portTICK_PERIOD_MS);
+    if (!Amplifier.isRunning())
+    {
+        Amplifier.connecttoFS(SPIFFS, buf.c_str());
+        while (Amplifier.isRunning())
+        {
+            Amplifier.loop();
+        }
+        Amplifier.loop();
+    }
     buf.clear();
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
+    Clock = RTC.getTime();
     buf = "/sound/H/";
     buf += "ch";
-    buf += Hour;
+    buf += Clock.hour;
     buf += ".mp3";
-    Amplifier.connecttoFS(SPIFFS, buf.c_str());
-    Amplifier.loop();
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    buf.clear();
+    Serial.printf(buf.c_str());
+    Serial.println();
 
-    uint8_t Min = Clock.minute;
+    if (!Amplifier.isRunning())
+    {
+        Amplifier.connecttoFS(SPIFFS, buf.c_str());
+        while (Amplifier.isRunning())
+        {
+            Amplifier.loop();
+        }
+        Amplifier.loop();
+    }
+    buf.clear();
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+
+    Clock = RTC.getTime();
     buf = "/sound/Mi/";
     buf += "min";
-    buf += Min;
+    buf += Clock.minute;
     buf += ".mp3";
-    Amplifier.connecttoFS(SPIFFS, buf.c_str());
-    Amplifier.loop();
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    Serial.printf(buf.c_str());
+    Serial.println();
+
+    if (!Amplifier.isRunning())
+    {
+        Amplifier.connecttoFS(SPIFFS, buf.c_str());
+        while (Amplifier.isRunning())
+        {
+            Amplifier.loop();
+        }
+        Amplifier.loop();
+    }
     buf.clear();
+}
+
+void Tell_me_DoorState(bool state)
+{
+    String buf;
+    switch (state)
+    {
+    case 1:
+        buf = "/sound/S/dclose.mp3";
+        if (!Amplifier.isRunning())
+        {
+            Amplifier.connecttoFS(SPIFFS, buf.c_str());
+            while (Amplifier.isRunning())
+            {
+                Amplifier.loop();
+            }
+            Amplifier.loop();
+        }
+        buf.clear();
+        break;
+
+    case 0:
+        buf = "/sound/S/dopen.mp3";
+        if (!Amplifier.isRunning())
+        {
+            Amplifier.connecttoFS(SPIFFS, buf.c_str());
+            while (Amplifier.isRunning())
+            {
+                Amplifier.loop();
+            }
+            Amplifier.loop();
+        }
+        buf.clear();
+        break;
+    default:
+        break;
+    }
 }
