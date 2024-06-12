@@ -48,6 +48,7 @@ void HandlerCore1(void *pvParameters);
 void GetDSData(void);
 void UART_Recieve_Data();
 void Tell_me_CurrentTime();
+void Tell_me_CurrentData();
 void Tell_me_DoorState(bool state);
 //=======================================================================
 
@@ -67,7 +68,6 @@ void HandlerCore0(void *pvParameters)
         // HandleClient();
         Amplifier.loop();
         UART_Recieve_Data();
-
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
@@ -78,9 +78,10 @@ void HandlerCore1(void *pvParameters)
     Serial.println(xPortGetCoreID());
     for (;;)
     {
+        Clock = RTC.getTime();
         sec_cnt++;
         GetDSData();
-        // DebugInfo();
+        DebugInfo();
         Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -91,19 +92,20 @@ void HandlerCore1(void *pvParameters)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.0.6";
-    CFG.fwdate = "11.06.2024";
+    CFG.fw = "0.0.7";
+    CFG.fwdate = "12.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
     Serial2.begin(RSSpeed);
     SystemInit();
-    // SPIFS
+    // SPIFFS
     if (!SPIFFS.begin(true))
     {
         Serial.println("An Error has occurred while mounting SPIFFS");
         return;
     }
+
     // RTC INIT
     RTC.begin();
     // RTC.setTime(COMPILE_TIME);
@@ -151,7 +153,6 @@ void setup()
 
     // HTTPinit(); // HTTP server initialisation
     // delay(1000);
-    // SayTimeData();
 
     xTaskCreatePinnedToCore(
         HandlerCore0,
@@ -161,7 +162,9 @@ void setup()
         1,
         &TaskCore_0,
         0);
-    delay(500);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+
+    // delay(500);
 
     xTaskCreatePinnedToCore(
         HandlerCore1,
@@ -171,7 +174,9 @@ void setup()
         1,
         &TaskCore_1,
         1);
-    delay(500);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+
+    // delay(500);
 }
 //=======================================================================
 
@@ -265,6 +270,11 @@ void UART_Recieve_Data()
                 Serial.println("DoorState");
                 Tell_me_DoorState(false);
             }
+            if (r == "date")
+            {
+                Serial.println("Current Date");
+                Tell_me_CurrentData();
+            }
         }
         else
         {
@@ -278,8 +288,6 @@ void UART_Recieve_Data()
 void Tell_me_CurrentTime()
 {
     String buf = "/sound/S/curtime.mp3";
-    // Amplifier.stopSong();
-    // vTaskDelay(50 / portTICK_PERIOD_MS);
     if (!Amplifier.isRunning())
     {
         Amplifier.connecttoFS(SPIFFS, buf.c_str());
@@ -367,4 +375,112 @@ void Tell_me_DoorState(bool state)
     default:
         break;
     }
+}
+
+void Tell_me_CurrentData()
+{
+    String buf;
+    buf = "/sound/S/today.mp3";
+
+    if (!Amplifier.isRunning())
+    {
+        Amplifier.connecttoFS(SPIFFS, buf.c_str());
+        while (Amplifier.isRunning())
+        {
+            Amplifier.loop();
+        }
+        Amplifier.loop();
+    }
+    buf.clear();
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+
+    buf = "/sound/DW/";
+    switch (Clock.day)
+    {
+    case MON: // Monday
+        buf += "mon.mp3";
+        break;
+    case TUE: // Tuesday
+        buf += "thu.mp3";
+        break;
+    case WED: // Wednesday
+        buf += "wed.mp3";
+        break;
+    case THU: // Thursday
+        buf += "thu.mp3";
+        break;
+    case FRI: // Friday
+        buf += "fri.mp3";
+        break;
+    case SAT: // Saturday
+        buf += "sat.mp3";
+        break;
+    case SUN: // Sunday
+        buf += "sun.mp3";
+        break;
+    default:
+        break;
+    }
+    Serial.printf(buf.c_str());
+    Serial.println();
+
+    if (!Amplifier.isRunning())
+    {
+        Amplifier.connecttoFS(SPIFFS, buf.c_str());
+        while (Amplifier.isRunning())
+        {
+            Amplifier.loop();
+        }
+        Amplifier.loop();
+    }
+    buf.clear();
+
+    buf = "/sound/NM/";
+    buf += "d";
+    buf += Clock.date;
+    buf += ".mp3";
+
+    if (!Amplifier.isRunning())
+    {
+        Amplifier.connecttoFS(SPIFFS, buf.c_str());
+        while (Amplifier.isRunning())
+        {
+            Amplifier.loop();
+        }
+        Amplifier.loop();
+    }
+    buf.clear();
+
+    buf = "/sound/Mo/";
+    switch (Clock.day)
+    {
+    case MON: // Monday
+        buf += "mon.mp3";
+        break;
+    case TUE: // Tuesday
+        buf += "thu.mp3";
+        break;
+    case WED: // Wednesday
+        buf += "wed.mp3";
+        break;
+    case THU: // Thursday
+        buf += "thu.mp3";
+        break;
+    case FRI: // Friday
+        buf += "fri.mp3";
+        break;
+    case SAT: // Saturday
+        buf += "sat.mp3";
+        break;
+    case SUN: // Sunday
+        buf += "sun.mp3";
+        break;
+    default:
+        break;
+    }
+    Serial.printf(buf.c_str());
+    Serial.println();
+
+
+
 }

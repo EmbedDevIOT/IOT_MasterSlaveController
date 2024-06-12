@@ -183,24 +183,24 @@ void DebugInfo()
 
     Serial.println(F("!!!!!!!!!!!!!!  DEBUG INFO  !!!!!!!!!!!!!!!!!!"));
 
-    sprintf(message, "StaticUPD: %0d CNT: %0d", STATE.StaticUPD, STATE.cnt_Supd);
-    Serial.println(message);
-    sprintf(message, "CAR_NUM: %d HideMode: %d", UserText.carnum, UserText.hide_t);
-    Serial.println(message);
-    Serial.printf("Brightness:");
-    Serial.println(HCONF.bright);
+    // sprintf(message, "StaticUPD: %0d CNT: %0d", STATE.StaticUPD, STATE.cnt_Supd);
+    // Serial.println(message);
+    // sprintf(message, "CAR_NUM: %d HideMode: %d", UserText.carnum, UserText.hide_t);
+    // Serial.println(message);
+    // Serial.printf("Brightness:");
+    // Serial.println(HCONF.bright);
     sprintf(message, "RTC Time: %02d:%02d:%02d", Clock.hour, Clock.minute, Clock.second);
     Serial.println(message);
     sprintf(message, "RTC Date: %4d.%02d.%02d", Clock.year, Clock.month, Clock.date);
     Serial.println(message);
 
-    sprintf(message, "T1: %0.1f T2: %0.1f", HCONF.dsT1, HCONF.dsT2);
-    Serial.println(message);
-    sprintf(message, "T1_OFS: %d T2_OFS: %d", HCONF.T1_offset, HCONF.T2_offset);
-    Serial.println(message);
+    // sprintf(message, "T1: %0.1f T2: %0.1f", HCONF.dsT1, HCONF.dsT2);
+    // Serial.println(message);
+    // sprintf(message, "T1_OFS: %d T2_OFS: %d", HCONF.T1_offset, HCONF.T2_offset);
+    // Serial.println(message);
 
-    Serial.printf("SN:");
-    Serial.println(CFG.sn);
+    // Serial.printf("SN:");
+    // Serial.println(CFG.sn);
 
     Serial.println(F("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"));
     Serial.println();

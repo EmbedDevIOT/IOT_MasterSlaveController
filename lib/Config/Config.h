@@ -95,7 +95,34 @@ enum Clicks
 {
   ONE = 1,
   TWO,
-  THREE,
+  THREE
+};
+
+enum DAY
+{
+  MON = 1,
+  TUE,
+  WED,
+  THU,
+  FRI,
+  SAT,
+  SUN
+};
+
+enum MONTH
+{
+  YAN = 1,
+  FEB,
+  MAR,
+  APR,
+  MAY,
+  JUN,
+  JUL,
+  AUG,
+  SEP,
+  OCTB,
+  NOV,
+  DECM,
 };
 
 //=======================================================================
