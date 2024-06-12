@@ -275,6 +275,12 @@ void UART_Recieve_Data()
                 Serial.println("Current Date");
                 Tell_me_CurrentData();
             }
+            if (r == "tellmetime")
+            {
+                Serial.println("Current Time and Date");
+                Tell_me_CurrentTime();
+                Tell_me_CurrentData();
+            }
         }
         else
         {
@@ -392,7 +398,7 @@ void Tell_me_CurrentData()
         Amplifier.loop();
     }
     buf.clear();
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
 
     buf = "/sound/DW/";
     switch (Clock.day)
@@ -434,6 +440,7 @@ void Tell_me_CurrentData()
         Amplifier.loop();
     }
     buf.clear();
+    vTaskDelay(200 / portTICK_PERIOD_MS);
 
     buf = "/sound/NM/";
     buf += "d";
@@ -452,28 +459,43 @@ void Tell_me_CurrentData()
     buf.clear();
 
     buf = "/sound/Mo/";
-    switch (Clock.day)
+    switch (Clock.month)
     {
-    case MON: // Monday
-        buf += "mon.mp3";
+    case YAN:
+        buf += "yan.mp3";
         break;
-    case TUE: // Tuesday
-        buf += "thu.mp3";
+    case FEB:
+        buf += "feb.mp3";
         break;
-    case WED: // Wednesday
-        buf += "wed.mp3";
+    case MAR:
+        buf += "mar.mp3";
         break;
-    case THU: // Thursday
-        buf += "thu.mp3";
+    case APR:
+        buf += "apr.mp3";
         break;
-    case FRI: // Friday
-        buf += "fri.mp3";
+    case MAY:
+        buf += "may.mp3";
         break;
-    case SAT: // Saturday
-        buf += "sat.mp3";
+    case JUN:
+        buf += "jun.mp3";
         break;
-    case SUN: // Sunday
-        buf += "sun.mp3";
+    case JUL:
+        buf += "jul.mp3";
+        break;
+    case AUG:
+        buf += "aug.mp3";
+        break;
+    case SEP:
+        buf += "sep.mp3";
+        break;
+    case OCTB:
+        buf += "oct.mp3";
+        break;
+    case NOV:
+        buf += "nov.mp3";
+        break;
+    case DECM:
+        buf += "dec.mp3";
         break;
     default:
         break;
@@ -481,6 +503,14 @@ void Tell_me_CurrentData()
     Serial.printf(buf.c_str());
     Serial.println();
 
-
-
+    if (!Amplifier.isRunning())
+    {
+        Amplifier.connecttoFS(SPIFFS, buf.c_str());
+        while (Amplifier.isRunning())
+        {
+            Amplifier.loop();
+        }
+        Amplifier.loop();
+    }
+    buf.clear();
 }

@@ -174,6 +174,14 @@ function BSysUPD() {
 
 }
 
+function BTellmeTime()
+{
+    let xml = new XMLHttpRequest();
+    let buf = "?";
+    xml.open("GET", "ColUPD" + buf, 1);
+    xml.send();
+}
+
 function BWiFiUPD() {
 
     let xml = new XMLHttpRequest();
