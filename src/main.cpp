@@ -24,6 +24,9 @@ DallasTemperature ds18b20_2(&oneWire2);
 
 TaskHandle_t TaskCore_0;
 TaskHandle_t TaskCore_1;
+TaskHandle_t Task1000ms;
+
+HardwareSerial RS485(2);
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -45,6 +48,8 @@ UserData UserText;
 //======================    FUNCTION PROTOTYPS     ======================
 void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
+void HandlerTask1000(void *pvParameters);
+void SendtoRS485();
 void GetDSData(void);
 void UART_Recieve_Data();
 void Tell_me_CurrentTime();
@@ -58,48 +63,19 @@ static uint8_t DS_dim(uint8_t i)
     return (i < 7) ? ((i == 1) ? 28 : ((i & 1) ? 30 : 31)) : ((i & 1) ? 31 : 30);
 }
 //=======================================================================
-// Pinned to Core 0. Network Stack Handler
-void HandlerCore0(void *pvParameters)
-{
-    Serial.print("Task0 running on core ");
-    Serial.println(xPortGetCoreID());
-    for (;;)
-    {
-        // HandleClient();
-        Amplifier.loop();
-        UART_Recieve_Data();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-}
-// Pinned to Core 1.
-void HandlerCore1(void *pvParameters)
-{
-    Serial.print("Task1 running on core ");
-    Serial.println(xPortGetCoreID());
-    for (;;)
-    {
-        Clock = RTC.getTime();
-        sec_cnt++;
-        GetDSData();
-        DebugInfo();
-        Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
-
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
-//=======================================================================
 
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.0.7";
+    CFG.fw = "0.0.8";
     CFG.fwdate = "12.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
-    Serial2.begin(RSSpeed);
+    Serial2.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
+    // Serial2.begin(RSSpeed);
     SystemInit();
-    // SPIFFS
+    // SPIFFS INIT
     if (!SPIFFS.begin(true))
     {
         Serial.println("An Error has occurred while mounting SPIFFS");
@@ -127,32 +103,19 @@ void setup()
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
 
-    // LoadConfig(); // Load configuration from config.json files
-    CFG.WiFiMode = 0;
-    WiFi.disconnect();
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(CFG.Ssid.c_str(), CFG.Password.c_str());
-    while (WiFi.status() != WL_CONNECTED)
-        delay(1500);
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-    Serial.println("");
-    // WIFIinit();
+    LoadConfig();         // Load configuration from config.json files
+    ShowLoadJSONConfig(); // Show load configuration
+
+    WIFIinit();
     delay(500);
 
     Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-    Amplifier.setVolume(5);
-
-    // String buf = "/sound/NM/";
-    // buf += "d1.mp3";
-    // Amplifier.connecttoFS(SPIFFS, buf.c_str());
+    Amplifier.setVolume(HCONF.volume);
 
     Serial.println(F("DAC PCM Amplifier...Done"));
 
-    // HTTPinit(); // HTTP server initialisation
-    // delay(1000);
+    HTTPinit(); // HTTP server initialisation
+    delay(1000);
 
     xTaskCreatePinnedToCore(
         HandlerCore0,
@@ -163,7 +126,6 @@ void setup()
         &TaskCore_0,
         0);
     vTaskDelay(500 / portTICK_PERIOD_MS);
-
     // delay(500);
 
     xTaskCreatePinnedToCore(
@@ -176,6 +138,15 @@ void setup()
         1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
+    xTaskCreatePinnedToCore(
+        HandlerTask1000,
+        "Task1000ms",
+        10000,
+        NULL,
+        1,
+        &Task1000ms,
+        1);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
     // delay(500);
 }
 //=======================================================================
@@ -183,7 +154,71 @@ void setup()
 //=======================        L O O P        =========================
 void loop()
 {
+    HandleClient();
     //   ButtonHandler();
+}
+//=======================================================================
+
+//======================    R T O S  T A S K    =========================
+// Core 0. Network Stack Handler
+void HandlerCore0(void *pvParameters)
+{
+    Serial.print("Task0 running on core ");
+    Serial.println(xPortGetCoreID());
+    for (;;)
+    {
+        Amplifier.loop();
+        // UART_Recieve_Data();
+        if (STATE.TTS)
+        {
+            Tell_me_CurrentTime();
+            Tell_me_CurrentData();
+            STATE.TTS = false;
+        }
+
+        if (STATE.DSTS)
+        {
+            Tell_me_DoorState(1);
+            STATE.DSTS = false;
+        }
+
+        if (STATE.VolumeUPD)
+        {
+            Amplifier.setVolume(HCONF.volume);
+            STATE.VolumeUPD = false;
+        }
+
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+// Core 1.
+void HandlerCore1(void *pvParameters)
+{
+    Serial.print("Task1 running on core ");
+    Serial.println(xPortGetCoreID());
+    for (;;)
+    {
+        Clock = RTC.getTime();
+        GetDSData();
+        DebugInfo();
+        Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
+// Core 1. 1000ms
+void HandlerTask1000(void *pvParameters)
+{
+    Serial.print("Task1 running on core ");
+    Serial.println(xPortGetCoreID());
+    for (;;)
+    {
+        sec_cnt++;
+        SendtoRS485();
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
 //=======================================================================
 
@@ -202,7 +237,7 @@ void GetDSData()
 
 //=========================================================================
 // Send  data (время, темп). Every 5 seconds
-void Task_2s()
+void SendtoRS485()
 {
     if (sec_cnt == 2)
     {
@@ -255,10 +290,8 @@ void UART_Recieve_Data()
             // Amplifier.connecttohost(r.c_str());
             if (r == "time")
             {
-                // Amplifier.connecttoFS(SPIFFS, r.c_str());
                 Serial.println("Current Time");
                 Tell_me_CurrentTime();
-                // Amplifier.connecttoFS(SPIFFS, "/sound/S/curtime.mp3");
             }
             if (r == "door1")
             {

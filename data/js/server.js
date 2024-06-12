@@ -84,6 +84,7 @@ function getConfig(information) {
                 document.getElementById("t1_offset").value = jsonBuf["t1_offset"];
                 document.getElementById("t2_offset").value = jsonBuf["t2_offset"];
                 document.getElementById("brigh").value = jsonBuf["br"];
+                document.getElementById("volume").value = jsonBuf["vol"];
             }
             else if (information == "shortcut") {
                 document.getElementById("sn").value = jsonBuf["sn"];
@@ -165,7 +166,8 @@ function BSysUPD() {
     buf += "D=" + document.getElementById("date").value + "&";
     buf += "T1O=" + document.getElementById("t1_offset").value + "&";
     buf += "T2O=" + document.getElementById("t2_offset").value + "&";
-    buf += "BR=" + document.getElementById("brigh").value;
+    buf += "BR=" + document.getElementById("brigh").value + "&";
+    buf += "VOL=" + document.getElementById("volume").value;
 
     xml.open("GET", "SysUPD" + buf, 1);
     console.log(xml);
@@ -177,8 +179,14 @@ function BSysUPD() {
 function BTellmeTime()
 {
     let xml = new XMLHttpRequest();
-    let buf = "?";
-    xml.open("GET", "ColUPD" + buf, 1);
+    xml.open("GET", "BTTS", 1);
+    xml.send();
+}
+
+function BDoorState()
+{
+    let xml = new XMLHttpRequest();
+    xml.open("GET", "BDS", 1);
     xml.send();
 }
 

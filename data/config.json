@@ -1,9 +1,9 @@
 {
    "sn": 0,
-   "firmware":"1.0",
+   "firmware":"0.6",
 
-   "ssid": "0840-0",
-   "pass": "retra0840zxc",
+   "ssid": "0845-0",
+   "pass": "retra0845zxc",
    "ip1": 192,
    "ip2": 168,
    "ip3": 1,
@@ -24,5 +24,6 @@
    
    "t1_offset": 0,
    "t2_offset": 0,
-   "br": 90
+   "br": 90,
+   "vol": 50
 }

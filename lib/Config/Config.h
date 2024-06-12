@@ -192,7 +192,7 @@ extern color col_tempout;
 //=======================================================================
 struct HardwareConfig
 {
-  uint8_t volume = 255;
+  uint8_t volume = 50;
   int8_t bright = 70; // speed running text
   float dsT1 = 0.0;
   int8_t T1_offset = 0;
@@ -219,6 +219,9 @@ struct Flag
   bool Debug : 1;
   bool CurDebug : 1;
   bool WiFiEnable : 1;
+  bool TTS : 1;        // Time to speech
+  bool DSTS : 1;       // DoorState to speech
+  bool VolumeUPD : 1;  // Volume update 
 };
 extern Flag STATE;
 //============================================================================

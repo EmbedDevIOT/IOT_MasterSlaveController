@@ -130,6 +130,9 @@ void SystemInit(void)
   STATE.Debug = true;
   STATE.CurDebug = false;
   STATE.WiFiEnable = true;
+  STATE.TTS = false;
+  STATE.DSTS = false;
+  STATE.VolumeUPD = false;
 
   GetChipID();
 }

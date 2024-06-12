@@ -39,6 +39,7 @@ void LoadConfig()
   } S;
 
   HCONF.bright = doc["br"];
+  HCONF.volume = doc["vol"];
 
   ColorSet(&col_carnum, doc["c_carnum"]);
   ColorSet(&col_date, doc["c_date"]);
@@ -137,8 +138,8 @@ void ShowLoadJSONConfig()
   Serial.println();
   sprintf(msg, "####  IP: %00d.%00d.%00d.%00d", CFG.IP1, CFG.IP2, CFG.IP3, CFG.IP4);
   Serial.println(F(msg));
-  Serial.printf("####  Brigh: %d", HCONF.bright);
-  Serial.println();
+  Serial.printf("####  Brigh: %d \r\n", HCONF.bright);
+  Serial.printf("####  Volume: %d \r\n", HCONF.volume);
   Serial.printf("####  SN: %d", CFG.sn);
   Serial.printf(" FW:");
   Serial.print(CFG.fw);
@@ -156,6 +157,7 @@ void SaveConfig()
   StaticJsonDocument<2048> doc;
 
   doc["br"] = HCONF.bright;
+  doc["vol"] = HCONF.volume;
   doc["c_carnum"] = GetColorNum(&col_carnum);
   doc["c_date"] = GetColorNum(&col_date);
   doc["c_infotext"] = GetColorNum(&col_runtext);

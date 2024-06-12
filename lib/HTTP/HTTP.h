@@ -18,6 +18,8 @@ void SerialNumberUPD(void);
 void SaveSecurity(void);
 void HandleClient(void);
 void Restart(void);
+void TimeToSpeech();
+void DoorStateToSpeech();
 void FactoryReset(void);
 void ShowSystemInfo(void);
 

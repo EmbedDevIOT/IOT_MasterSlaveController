@@ -15,7 +15,9 @@ void HTTPinit()
   HTTP.on("/ColUPD", ColorUpdate);
   HTTP.on("/SNUPD", SerialNumberUPD);
   HTTP.on("/WiFiUPD", SaveSecurity);
-  HTTP.on("/BRBT", Restart); // Restart MCU
+  HTTP.on("/BRBT", Restart);           // Restart MCU
+  HTTP.on("/BTTS", TimeToSpeech);      // Tell me Date an Time
+  HTTP.on("/BDS", DoorStateToSpeech);   // Tell me Door state
   HTTP.on("/FW", ShowSystemInfo);
   HTTP.on("/BFRST", FactoryReset);               // Set default parametrs.
   HTTP.onNotFound([]() {                         // Event "Not Found"
@@ -64,7 +66,7 @@ String getContentType(String filename)
   else if (filename.endsWith(".gif"))
     return "image/gif"; // Если файл заканчивается на ".gif", то возвращаем заголовок "image/gif" и завершаем выполнение функции
   else if (filename.endsWith(".svg"))
-    return "image/svg+xml"; 
+    return "image/svg+xml";
   else if (filename.endsWith(".ico"))
     return "image/x-icon"; // Если файл заканчивается на ".ico", то возвращаем заголовок "image/x-icon" и завершаем выполнение функции
   return "text/plain";     // Если ни один из типов файла не совпал, то считаем что содержимое файла текстовое, отдаем соответствующий заголовок и завершаем выполнение функции
@@ -115,6 +117,8 @@ void SystemUpdate()
   HCONF.T2_offset = HTTP.arg("T2O").toInt();
   HCONF.bright = HTTP.arg("BR").toInt();
 
+  HCONF.volume = HTTP.arg("VOL").toInt();
+
   Clock.hour = S.H;
   Clock.minute = S.M;
   Clock.year = S.Y;
@@ -134,12 +138,15 @@ void SystemUpdate()
   Serial.println();
   Serial.printf("Brigh: %d", HCONF.bright);
   Serial.println();
+  Serial.printf("Volume: %d", HCONF.volume);
+  Serial.println();
 #endif
 
   RTC.setTime(Clock);
   SaveConfig();
   STATE.StaticUPD = true;
   STATE.cnt_Supd = 0;
+  STATE.VolumeUPD = true;
 
   // ShowLoadJSONConfig();
 
@@ -300,7 +307,20 @@ void SaveSecurity()
   HTTP.send(200, "text/plain", "OK");
 }
 /*******************************************************************************************************/
-
+/*******************************************************************************************************/
+void TimeToSpeech()
+{
+  STATE.TTS = true;
+  HTTP.send(200, "text/plain", "OK");
+}
+/*******************************************************************************************************/
+/*******************************************************************************************************/
+void DoorStateToSpeech()
+{
+  STATE.DSTS = true;
+  HTTP.send(200, "text/plain", "OK");
+}
+/*******************************************************************************************************/
 /*******************************************************************************************************/
 // ESP Restart
 void Restart()
