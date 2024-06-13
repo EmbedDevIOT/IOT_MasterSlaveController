@@ -36,11 +36,12 @@ HardwareConfig HCONF;
 Flag STATE;
 
 color col_carnum;
-color col_runtext;
 color col_time;
 color col_date;
 color col_tempin;
 color col_tempout;
+color col_wc;
+color col_speed;
 
 UserData UserText;
 //=======================================================================
@@ -67,8 +68,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.0.8";
-    CFG.fwdate = "12.06.2024";
+    CFG.fw = "0.0.9";
+    CFG.fwdate = "13.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -250,12 +251,15 @@ void SendtoRS485()
         }
         if (STATE.StaticUPD && STATE.cnt_Supd < 2)
         {
-            SendXMLDataS();
+            // SendXMLDataS();
+            Send_ITdata(1);
         }
 
         if (!STATE.DUPDBlock)
         {
-            SendXMLDataD();
+            // SendXMLDataD();
+            Send_GPSdata();
+
         }
         sec_cnt = 0;
     }
@@ -337,7 +341,7 @@ void Tell_me_CurrentTime()
         Amplifier.loop();
     }
     buf.clear();
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    // vTaskDelay(500 / portTICK_PERIOD_MS);
 
     Clock = RTC.getTime();
     buf = "/sound/H/";
@@ -357,7 +361,7 @@ void Tell_me_CurrentTime()
         Amplifier.loop();
     }
     buf.clear();
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    // vTaskDelay(500 / portTICK_PERIOD_MS);
 
     Clock = RTC.getTime();
     buf = "/sound/Mi/";
@@ -431,7 +435,7 @@ void Tell_me_CurrentData()
         Amplifier.loop();
     }
     buf.clear();
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    // vTaskDelay(200 / portTICK_PERIOD_MS);
 
     buf = "/sound/DW/";
     switch (Clock.day)
@@ -473,7 +477,7 @@ void Tell_me_CurrentData()
         Amplifier.loop();
     }
     buf.clear();
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    // vTaskDelay(200 / portTICK_PERIOD_MS);
 
     buf = "/sound/NM/";
     buf += "d";

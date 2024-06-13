@@ -165,52 +165,39 @@ void TextUpdate()
   struct _txt
   {
     char TN[17];     // car_name
-    char TI[1024];   // text info
     uint8_t TNU = 0; // car num
-    bool SW = true;
     bool SWH = false;
-    uint8_t SP = 0;
   } T;
 
   HTTP.arg("TN").toCharArray(T.TN, 17);
   T.TNU = HTTP.arg("TNU").toInt();
-  HTTP.arg("TI").toCharArray(T.TI, 1024);
-  T.SW = HTTP.arg("SW").toInt();
+
   T.SWH = HTTP.arg("SWH").toInt();
-  T.SP = HTTP.arg("SP").toInt();
 
   memset(UserText.carname, 0, strlen(UserText.carname));
   strcat(UserText.carname, T.TN);
 
-  memset(UserText.runtext, 0, strlen(UserText.runtext));
-  strcat(UserText.runtext, T.TI);
-
-  UserText.run_mode = T.SW;
-  UserText.speed = T.SP;
   UserText.carnum = T.TNU;
 
+  // Если новое состояние != старому
   if (T.SWH != UserText.hide_t)
   {
     UserText.hide_t = T.SWH;
-    SendXMLDataD();
+
+    // SendXMLDataD();
   }
 
   // #ifndef DEBUG
-  //   Serial.printf("Name: ");
-  //   Serial.printf(T.TN);
-  //   Serial.println(msg);
+    Serial.printf("Name: ");
+    Serial.printf(T.TN);
+    Serial.println(msg);
 
-  //   Serial.printf("CarNum: ");
-  //   Serial.println(T.TNU);
+    Serial.printf("CarNum: ");
+    Serial.println(T.TNU);
 
-  //   Serial.printf("Info: ");
-  //   Serial.printf(T.TI);
-  //   Serial.println(msg);
 
-  //   Serial.printf("RunText: %d", T.SW);
-  //   Serial.println();
-  //   Serial.printf("Speed: %d", T.SP);
-  //   Serial.println();
+    Serial.printf("Hide Carnum: %d", T.SWH);
+    Serial.println();
   // #endif
 
   // SaveConfig();
@@ -231,7 +218,6 @@ void ColorUpdate()
   struct _col
   {
     uint8_t CC = HTTP.arg("CC").toInt();
-    uint8_t CI = HTTP.arg("CI").toInt();
     uint8_t CT = HTTP.arg("CT").toInt();
     uint8_t CD = HTTP.arg("CD").toInt();
     uint8_t CTI = HTTP.arg("CTI").toInt();
@@ -254,7 +240,6 @@ void ColorUpdate()
   // #endif
 
   ColorSet(&col_carnum, C.CC);
-  ColorSet(&col_runtext, C.CI);
   ColorSet(&col_time, C.CT);
   ColorSet(&col_date, C.CD);
   ColorSet(&col_tempin, C.CTI);

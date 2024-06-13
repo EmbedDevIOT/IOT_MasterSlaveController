@@ -12,11 +12,8 @@
    "carname": "Вагон",
    "carnum": 7,
    "hide": 0,
-   "infotext": "Москва-Рязань-Самара-Оренбург-Исатай-Макат-Жаслык-Мискин-Ташкент",
-   "runtext": 1,
-   "speed": 20,
+
    "c_carnum" : 6,
-   "c_infotext" : 5,
    "c_time" : 5,
    "c_date" : 5,
    "c_tempin" : 1,

@@ -167,11 +167,9 @@ extern GlobalConfig CFG;
 struct UserData
 {
   char carname[17] = "";
+  char wcname[13] = "Tуалет";
   int carnum = 0;
-  char runtext[1024] = "";
-  bool run_mode = true; // text running
   bool hide_t = false;  // Hidden car number text
-  int8_t speed = 20;    // speed running text
 };
 extern UserData UserText;
 
@@ -182,11 +180,12 @@ struct color
   int B;
 };
 extern color col_carnum;
-extern color col_runtext;
 extern color col_time;
 extern color col_date;
 extern color col_tempin;
 extern color col_tempout;
+extern color col_wc;      // dynamic
+extern color col_speed;   // dynamic
 //=======================================================================
 
 //=======================================================================
@@ -240,8 +239,10 @@ void SystemFactoryReset(void);
 void ShowFlashSave(void);
 void getTimeChar(char *array);
 void getDateChar(char *array);
-void SendXMLDataS(void);
-void SendXMLDataD(void);
+void Send_GPSdata();
+void Send_ITdata(uint8_t adr);
+void Send_BSdata(uint8_t adr);
+
 void SendXMLUserData(char *msg);
 unsigned int CRC16_mb(char *buf, int len);
 //============================================================================

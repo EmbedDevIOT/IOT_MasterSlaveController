@@ -23,10 +23,8 @@ void LoadConfig()
   struct _txt
   {
     char TN[17];     // car_name
-    char TI[1024];   // text info
     uint8_t TNU = 0; // car num
     bool SW = true;
-    uint8_t SP = 0;
   } T;
 
   struct _sys
@@ -43,7 +41,6 @@ void LoadConfig()
 
   ColorSet(&col_carnum, doc["c_carnum"]);
   ColorSet(&col_date, doc["c_date"]);
-  ColorSet(&col_runtext, doc["c_infotext"]);
   ColorSet(&col_tempin, doc["c_tempin"]);
   ColorSet(&col_tempout, doc["c_tempout"]);
   ColorSet(&col_time, doc["c_time"]);
@@ -63,21 +60,14 @@ void LoadConfig()
 
   UserText.hide_t = doc["hide"];
 
-  doc["infotext"].as<String>().toCharArray(T.TI, 1024);
-  memset(UserText.runtext, 0, strlen(UserText.runtext));
-  strcat(UserText.runtext, T.TI);
-
   CFG.IP1 = doc["ip1"];
   CFG.IP2 = doc["ip2"];
   CFG.IP3 = doc["ip3"];
   CFG.IP4 = doc["ip4"];
 
   CFG.APPAS = doc["pass"].as<String>();
-  UserText.run_mode = doc["runtext"];
 
-  // CFG.sn = doc["sn"];
-
-  UserText.speed = doc["speed"];
+  CFG.sn = doc["sn"];
 
   CFG.APSSID = doc["ssid"].as<String>();
 
@@ -99,8 +89,6 @@ void ShowLoadJSONConfig()
   Serial.println();
   Serial.printf("####  DATE: %d", GetColorNum(&col_date));
   Serial.println();
-  Serial.printf("####  INFO_TEXT: %d", GetColorNum(&col_runtext));
-  Serial.println();
   Serial.printf("####  TEMPIN: %d", GetColorNum(&col_tempin));
   Serial.println();
   Serial.printf("####  TEMPOUT: %d", GetColorNum(&col_tempout));
@@ -113,11 +101,6 @@ void ShowLoadJSONConfig()
   Serial.printf("####  HideNum: %d", UserText.hide_t);
   Serial.println();
   Serial.printf("####  CarNum: %d", UserText.carnum);
-  Serial.println();
-  Serial.printf("####  RunText: %d  SPEED: %d", UserText.run_mode, UserText.speed);
-  Serial.println();
-  Serial.printf("####  Text:");
-  Serial.printf(UserText.runtext);
   Serial.println();
   Serial.printf("####  T1_OFFSET: %d", HCONF.T1_offset);
   Serial.println();
@@ -160,7 +143,6 @@ void SaveConfig()
   doc["vol"] = HCONF.volume;
   doc["c_carnum"] = GetColorNum(&col_carnum);
   doc["c_date"] = GetColorNum(&col_date);
-  doc["c_infotext"] = GetColorNum(&col_runtext);
   doc["c_tempin"] = GetColorNum(&col_tempin);
   doc["c_tempout"] = GetColorNum(&col_tempout);
   doc["c_time"] = GetColorNum(&col_time);
@@ -170,15 +152,12 @@ void SaveConfig()
   // doc["date"] = String(Clock.year) + "-" + ((Clock.month < 10) ? "0" : "") + String(Clock.month) + "-" + ((Clock.date < 10) ? "0" : "") + String(Clock.date);
   doc["firmware"] = CFG.fw;
   doc["hide"] = UserText.hide_t;
-  doc["infotext"] = String(UserText.runtext);
   doc["ip1"] = CFG.IP1;
   doc["ip2"] = CFG.IP2;
   doc["ip3"] = CFG.IP3;
   doc["ip4"] = CFG.IP4;
   doc["pass"] = CFG.APPAS;
-  doc["runtext"] = UserText.run_mode;
   doc["sn"] = CFG.sn;
-  doc["speed"] = UserText.speed;
   doc["ssid"] = CFG.APSSID;
   doc["t1_offset"] = HCONF.T1_offset;
   doc["t2_offset"] = HCONF.T2_offset;
@@ -216,11 +195,11 @@ void TestDeserializJSON()
 
 void EEP_Write()
 {
-  eep.write(0, CFG.sn);
+  // eep.write(0, CFG.sn);
 }
 
 // Reading data from EEPROM
 void EEP_Read()
 {
-  CFG.sn = eep.read(0);
+  // CFG.sn = eep.read(0);
 }

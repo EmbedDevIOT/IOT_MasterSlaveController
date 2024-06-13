@@ -48,24 +48,24 @@ function getConfig(information) {
                 document.getElementById("sn").value = jsonBuf["sn"];
                 document.getElementById("carname").value = jsonBuf["carname"];
                 document.getElementById("carnum").value = jsonBuf["carnum"];
-                document.getElementById("infotext").value = jsonBuf["infotext"];
-                document.getElementById("speed").value = jsonBuf["speed"];
+                // document.getElementById("infotext").value = jsonBuf["infotext"];
+                // document.getElementById("speed").value = jsonBuf["speed"];
+                // document.getElementById("c_infotext").value = jsonBuf["c_infotext"];
                 document.getElementById("c_carnum").value = jsonBuf["c_carnum"];
-                document.getElementById("c_infotext").value = jsonBuf["c_infotext"];
                 document.getElementById("c_time").value = jsonBuf["c_time"];
                 document.getElementById("c_date").value = jsonBuf["c_date"];
                 document.getElementById("c_tempin").value = jsonBuf["c_tempin"];
                 document.getElementById("c_tempout").value = jsonBuf["c_tempout"];
 
 
-                if (jsonBuf["runtext"] == 1) {
-                    const element1 = document.getElementById("sw_runtext");
-                    const attribute = document.createAttribute('checked');
-                    element1.setAttributeNode(attribute);
-                }
-                else {
-                    document.getElementById("sw_runtext").removeAttribute('checked');
-                }
+                // if (jsonBuf["runtext"] == 1) {
+                //     const element1 = document.getElementById("sw_runtext");
+                //     const attribute = document.createAttribute('checked');
+                //     element1.setAttributeNode(attribute);
+                // }
+                // else {
+                //     document.getElementById("sw_runtext").removeAttribute('checked');
+                // }
 
                 if (jsonBuf["hide"] == 1) {
                     const element1 = document.getElementById("sw_hide");
@@ -116,25 +116,26 @@ function AllDataUPD() {
     let xml = new XMLHttpRequest();
     let buf = "?";
 
-    var sw = document.getElementById("sw_runtext")
-    var isCheck = sw.checked;
+    // var sw = document.getElementById("sw_runtext")
+    // var isCheck = sw.checked;
 
 
     buf += "TN=" + document.getElementById("carname").value + "&";
     buf += "TNU=" + document.getElementById("carnum").value + "&";
-    buf += "TI=" + document.getElementById("infotext").value + "&";
+    // buf += "TI=" + document.getElementById("infotext").value + "&";
+
+    // if (isCheck) {
+    //     buf += "SW=" + 1 + "&";
+    // } else buf += "SW=" + 0 + "&";
+
+    var sw = document.getElementById("sw_hide");
+    var isCheck = sw.checked;
 
     if (isCheck) {
-        buf += "SW=" + 1 + "&";
-    } else buf += "SW=" + 0 + "&";
+        buf += "SWH=" + 1;
+    } else buf += "SWH=" + 0;
 
-    sw = document.getElementById("sw_hide");
-    isCheck = sw.checked;
-    if (isCheck) {
-        buf += "SWH=" + 1 + "&";
-    } else buf += "SWH=" + 0 + "&";
-
-    buf += "SP=" + document.getElementById("speed").value;
+    // buf += "SP=" + document.getElementById("speed").value;
 
     xml.open("GET", "TextUPD" + buf, 1);
     xml.send();
@@ -147,7 +148,7 @@ function BColUPD() {
     let buf = "?";
 
     buf += "CC=" + document.getElementById("c_carnum").value + "&";
-    buf += "CI=" + document.getElementById("c_infotext").value + "&";
+    // buf += "CI=" + document.getElementById("c_infotext").value + "&";
     buf += "CT=" + document.getElementById("c_time").value + "&";
     buf += "CD=" + document.getElementById("c_date").value + "&";
     buf += "CTI=" + document.getElementById("c_tempin").value + "&";
