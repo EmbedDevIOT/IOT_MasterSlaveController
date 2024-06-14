@@ -85,16 +85,13 @@ void ShowLoadJSONConfig()
 
   Serial.println(F("##############  System Configuration  ###############"));
   Serial.println("---------------------- COLOR ------------------------");
-  Serial.printf("####  CARNUM: %d", GetColorNum(&col_carnum));
-  Serial.println();
-  Serial.printf("####  DATE: %d", GetColorNum(&col_date));
-  Serial.println();
-  Serial.printf("####  TEMPIN: %d", GetColorNum(&col_tempin));
-  Serial.println();
-  Serial.printf("####  TEMPOUT: %d", GetColorNum(&col_tempout));
-  Serial.println();
-  Serial.printf("####  TIME: %d", GetColorNum(&col_time));
-  Serial.println();
+  Serial.printf("####  CARNUM: %d \r\n", GetColorNum(&col_carnum));
+  Serial.printf("####  DATE: %d \r\n", GetColorNum(&col_date));
+  Serial.printf("####  TEMPIN: %d \r\n", GetColorNum(&col_tempin));
+  Serial.printf("####  TEMPOUT: %d \r\n", GetColorNum(&col_tempout));
+  Serial.printf("####  TIME: %d \r\n", GetColorNum(&col_time));
+  Serial.printf("####  WC: %d \r\n", GetColorNum(&col_wc));
+  Serial.printf("####  SPEED: %d \r\n", GetColorNum(&col_speed));
   Serial.println("-------------------- COLOR END ----------------------");
   Serial.println();
   Serial.println("-------------------- USER DATA -----------------------");

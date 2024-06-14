@@ -68,12 +68,12 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.0.9";
-    CFG.fwdate = "13.06.2024";
+    CFG.fw = "0.1.0";
+    CFG.fwdate = "14.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
-    Serial2.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
+    Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
     // Serial2.begin(RSSpeed);
     SystemInit();
     // SPIFFS INIT
@@ -104,8 +104,30 @@ void setup()
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
 
+    // if (digitalRead(WC1) == 0)
+    // {
+    //     ColorSet(&col_wc, RED);
+    // }
+    // else
+    //     ColorSet(&col_wc, GREEN);
+
+    // if (digitalRead(WC2) == 0)
+    // {
+    //     // ColorSet(&col_wc, RED);
+    // }
+    // else
+    //     // ColorSet(&col_wc, GREEN);
+    ColorSet(&col_wc, GREEN);
+    ColorSet(&col_speed, WHITE);
+
     LoadConfig();         // Load configuration from config.json files
     ShowLoadJSONConfig(); // Show load configuration
+
+    // for (uint8_t i = 0; i < 3; i++)
+    // {
+    // Send_ITdata(1);
+    //     delay(1000);
+    // }
 
     WIFIinit();
     delay(500);
@@ -142,7 +164,7 @@ void setup()
     xTaskCreatePinnedToCore(
         HandlerTask1000,
         "Task1000ms",
-        10000,
+        12000,
         NULL,
         1,
         &Task1000ms,
@@ -217,6 +239,11 @@ void HandlerTask1000(void *pvParameters)
     {
         sec_cnt++;
         SendtoRS485();
+        // Send_GPSdata();
+        // Send_BSdata(1);
+        // Send_ITdata(1);
+        // Send_BSdata(2);
+        // Send_BSdata(3);
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -251,15 +278,16 @@ void SendtoRS485()
         }
         if (STATE.StaticUPD && STATE.cnt_Supd < 2)
         {
-            // SendXMLDataS();
+
             Send_ITdata(1);
+            // SendXMLDataS();
+            // Send_ITdata(1);
         }
 
         if (!STATE.DUPDBlock)
         {
-            // SendXMLDataD();
             Send_GPSdata();
-
+            Send_BSdata(1);
         }
         sec_cnt = 0;
     }

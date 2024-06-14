@@ -316,10 +316,13 @@ void Send_GPSdata()
   getTimeChar(CFG.time);
   getDateChar(CFG.date);
 
-  unsigned int crc;
+  unsigned int crc = 0;
 
   char buf_crc[256] = "";
   char xml[256] = "";
+
+  memset(buf_crc, 0, strlen(buf_crc));
+  memset(xml, 0, strlen(xml));
 
   if (CFG.TimeZone == 0)
   {
@@ -380,6 +383,8 @@ void Send_GPSdata()
   strcat(xml, "</gps_crc>\r\n");
   strcat(xml, "</gps_data>");
 
+  Serial.println(xml);
+  Serial.println();
   Serial2.println(xml);
   Serial2.println();
 }
@@ -391,9 +396,8 @@ void Send_ITdata(uint8_t adr)
   unsigned int crc;
   char buf_crc[4096] = "";
   memset(buf_crc, 0, strlen(buf_crc));
-  char xml[3072] = "";
+  char xml[4096] = "";
   memset(xml, 0, strlen(xml));
-
 
   switch (adr)
   {
@@ -457,17 +461,9 @@ void Send_ITdata(uint8_t adr)
   strcat(buf_crc, "</bgcolor>\r\n");
   strcat(buf_crc, "<mode>0</mode>\r\n");
   strcat(buf_crc, "<align>center</align>\r\n");
-
-  // Carname and Carnum Text
   strcat(buf_crc, "<text>");
   strcat(buf_crc, "$textbs");
-  // strcat(buf_crc, "$auxtext1");
-  // strcat(buf_crc, UserText.carname);
-  // strcat(buf_crc, " ");
-  // itoa(UserText.carnum, buf_crc + strlen(buf_crc), DEC);
-
   strcat(buf_crc, "</text>\r\n");
-  // Carnum Text END
   strcat(buf_crc, "<font>[16=0+14+2]2+medium+condensed+regular.font</font>\r\n");
   strcat(buf_crc, "</zone>\r\n");
   strcat(buf_crc, "\r\n");
@@ -508,31 +504,21 @@ void Send_ITdata(uint8_t adr)
   strcat(buf_crc, "<Y>16</Y>\r\n");
   strcat(buf_crc, "</size>\r\n");
   strcat(buf_crc, "<color>\r\n");
-  // Run Text Color
-  // ColorWrite(buf_crc, &col_runtext);
   ColorWrite(buf_crc, &col_carnum);
-  // Run Text Color END
   strcat(buf_crc, "</color>\r\n");
   strcat(buf_crc, "<bgcolor>\r\n");
   strcat(buf_crc, "<R>0</R>\r\n");
   strcat(buf_crc, "<G>0</G>\r\n");
   strcat(buf_crc, "<B>0</B>\r\n");
   strcat(buf_crc, "</bgcolor>\r\n");
-  // Set mode run Text
   strcat(buf_crc, "<mode>0");
-  // itoa(UserText.run_mode, buf_crc + strlen(buf_crc), DEC);
   strcat(buf_crc, "</mode>\r\n");
   strcat(buf_crc, "<direction>RTL</direction>\r\n");
   strcat(buf_crc, "<speed>10");
-  // itoa(UserText.speed, buf_crc + strlen(buf_crc), DEC);
   strcat(buf_crc, "</speed>\r\n");
-  // Run Text Data Start
   strcat(buf_crc, "<text>");
   strcat(buf_crc, "$route");
-
-  // strcat(buf_crc, UserText.runtext);
   strcat(buf_crc, "</text>\r\n");
-  // Run Text Data END
   strcat(buf_crc, "<font>[16=0+14+2]2+medium+condensed+regular.font</font>\r\n");
   strcat(buf_crc, "</zone>\r\n");
   strcat(buf_crc, "\r\n");
@@ -638,10 +624,64 @@ void Send_ITdata(uint8_t adr)
 void Send_BSdata(uint8_t adr)
 {
   // memset(UserText.carname, 0, strlen(UserText.carname));
+  unsigned int crc = 0;
 
+  char buf[1024] = "";
+  char xml[1024] = "";
+
+  switch (adr)
+  {
+  case 1:
+    strcat(buf, "<adr id=\"1\">\r\n");
+    break;
+  case 2:
+    strcat(buf, "<adr id=\"2\">\r\n");
+    break;
+  case 3:
+    strcat(buf, "<adr id=\"3\">\r\n");
+    break;
+  default:
+    break;
+  }
+  strcat(buf, "<color_text>FF0000");
+  // ColorWrite(buf, &col_wc);
+  strcat(buf, "</color_text>\r\n");
+  strcat(buf, "<color_route>FF0000");
+  // ColorWrite(buf, &col_carnum);
+  strcat(buf, "</color_route>\r\n");
+  strcat(buf, "<color_speed>FF0000");
+  // ColorWrite(buf, &col_speed);
+  strcat(buf, "</color_speed>\r\n");
+  strcat(buf, "<route_name>");
+  if (UserText.hide_t == false)
+  {
+    strcat(buf, UserText.carname);
+    strcat(buf, " ");
+    itoa(UserText.carnum, buf + strlen(buf), DEC);
+  }
+  else
+  {
+    strcat(buf, UserText.carname);
+  }
+  strcat(buf, "</route_name>\r\n");
+
+  strcat(buf, "<text_bs>Туалет");
+  strcat(buf, "</text_bs>\r\n");
+  strcat(buf, "</adr>\r\n");
+  // CRC
+  crc = CRC16_mb(buf, strlen(buf));
+  strcat(xml, "<intboard_data>\r\n");
+  strcat(xml,buf);
+  strcat(xml, "<intboard_crc>");
+  char crc_temp[5] = {0};
+  sprintf(crc_temp, "%04X", crc);
+  strcat(xml, crc_temp);
+  strcat(xml,"</intboard_crc>\r\n");
+  strcat(xml, "</intboard_data>\r\n");
+
+  Serial2.println(xml);
 }
 //=========================================================================
-
 
 /*****************************************************************************************/
 void SendXMLUserData(char *msg)
