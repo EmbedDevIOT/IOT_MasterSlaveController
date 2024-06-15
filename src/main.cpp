@@ -24,7 +24,7 @@ DallasTemperature ds18b20_2(&oneWire2);
 
 TaskHandle_t TaskCore_0;
 TaskHandle_t TaskCore_1;
-TaskHandle_t Task1000ms;
+TaskHandle_t Task500ms;
 
 HardwareSerial RS485(2);
 //=======================================================================
@@ -38,6 +38,7 @@ Flag STATE;
 color col_carnum;
 color col_time;
 color col_date;
+color col_day;
 color col_tempin;
 color col_tempout;
 color col_wc;
@@ -49,9 +50,10 @@ UserData UserText;
 //======================    FUNCTION PROTOTYPS     ======================
 void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
-void HandlerTask1000(void *pvParameters);
+void HandlerTask500(void *pvParameters);
 void SendtoRS485();
 void GetDSData(void);
+bool GetWCState(uint8_t num);
 void UART_Recieve_Data();
 void Tell_me_CurrentTime();
 void Tell_me_CurrentData();
@@ -68,8 +70,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.0";
-    CFG.fwdate = "14.06.2024";
+    CFG.fw = "0.1.1";
+    CFG.fwdate = "15.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -104,30 +106,11 @@ void setup()
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
 
-    // if (digitalRead(WC1) == 0)
-    // {
-    //     ColorSet(&col_wc, RED);
-    // }
-    // else
-    //     ColorSet(&col_wc, GREEN);
-
-    // if (digitalRead(WC2) == 0)
-    // {
-    //     // ColorSet(&col_wc, RED);
-    // }
-    // else
-    //     // ColorSet(&col_wc, GREEN);
     ColorSet(&col_wc, GREEN);
     ColorSet(&col_speed, WHITE);
 
     LoadConfig();         // Load configuration from config.json files
     ShowLoadJSONConfig(); // Show load configuration
-
-    // for (uint8_t i = 0; i < 3; i++)
-    // {
-    // Send_ITdata(1);
-    //     delay(1000);
-    // }
 
     WIFIinit();
     delay(500);
@@ -162,15 +145,14 @@ void setup()
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
     xTaskCreatePinnedToCore(
-        HandlerTask1000,
-        "Task1000ms",
+        HandlerTask500,
+        "Task500ms",
         12000,
         NULL,
         1,
-        &Task1000ms,
+        &Task500ms,
         1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
-    // delay(500);
 }
 //=======================================================================
 
@@ -186,7 +168,7 @@ void loop()
 // Core 0. Network Stack Handler
 void HandlerCore0(void *pvParameters)
 {
-    Serial.print("Task0 running on core ");
+    Serial.print("Task:0 T:10ms Stack:10000 Core:");
     Serial.println(xPortGetCoreID());
     for (;;)
     {
@@ -214,41 +196,62 @@ void HandlerCore0(void *pvParameters)
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
-// Core 1.
+// Core 1. 1000ms
 void HandlerCore1(void *pvParameters)
 {
-    Serial.print("Task1 running on core ");
+    Serial.print("Task:1 T:1000ms Stack:2048 Core:");
     Serial.println(xPortGetCoreID());
     for (;;)
     {
         Clock = RTC.getTime();
         GetDSData();
         DebugInfo();
-        Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
+        // Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
 // Core 1. 1000ms
-void HandlerTask1000(void *pvParameters)
+void HandlerTask500(void *pvParameters)
 {
-    Serial.print("Task1 running on core ");
+    Serial.print("Task:3 T:500ms Stack:12000 Core:");
     Serial.println(xPortGetCoreID());
     for (;;)
     {
         sec_cnt++;
-        SendtoRS485();
-        // Send_GPSdata();
-        // Send_BSdata(1);
-        // Send_ITdata(1);
-        // Send_BSdata(2);
-        // Send_BSdata(3);
+        HCONF.wc1 = GetWCState(WC1);
+        HCONF.wc2 = GetWCState(WC2);
+        if (HCONF.wc1)
+            ColorSet(&col_wc, RED);
+        else
+            ColorSet(&col_wc, GREEN);
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        SendtoRS485();
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 //=======================================================================
+
+//=========================================================================
+// Get WC Door State
+bool GetWCState(uint8_t num)
+{
+    boolean state = false;
+    switch (num)
+    {
+    case WC1:
+        state = digitalRead(WC1);
+        break;
+    case WC2:
+        state = digitalRead(WC2);
+        break;
+
+    default:
+        break;
+    }
+    return !state;
+}
 
 //=========================================================================
 // Get Data from DS18B20 Sensor
@@ -278,16 +281,15 @@ void SendtoRS485()
         }
         if (STATE.StaticUPD && STATE.cnt_Supd < 2)
         {
-
             Send_ITdata(1);
-            // SendXMLDataS();
-            // Send_ITdata(1);
         }
 
         if (!STATE.DUPDBlock)
         {
-            Send_GPSdata();
+            vTaskDelay(100 / portTICK_PERIOD_MS);
             Send_BSdata(1);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            Send_GPSdata();
         }
         sec_cnt = 0;
     }

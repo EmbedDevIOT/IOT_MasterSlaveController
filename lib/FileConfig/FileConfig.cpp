@@ -41,6 +41,7 @@ void LoadConfig()
 
   ColorSet(&col_carnum, doc["c_carnum"]);
   ColorSet(&col_date, doc["c_date"]);
+  // ColorSet(&col_day, doc["c_date"]);
   ColorSet(&col_tempin, doc["c_tempin"]);
   ColorSet(&col_tempout, doc["c_tempout"]);
   ColorSet(&col_time, doc["c_time"]);
@@ -87,6 +88,7 @@ void ShowLoadJSONConfig()
   Serial.println("---------------------- COLOR ------------------------");
   Serial.printf("####  CARNUM: %d \r\n", GetColorNum(&col_carnum));
   Serial.printf("####  DATE: %d \r\n", GetColorNum(&col_date));
+  // Serial.printf("####  DAY: %d \r\n", GetColorNum(&col_day));
   Serial.printf("####  TEMPIN: %d \r\n", GetColorNum(&col_tempin));
   Serial.printf("####  TEMPOUT: %d \r\n", GetColorNum(&col_tempout));
   Serial.printf("####  TIME: %d \r\n", GetColorNum(&col_time));
@@ -95,14 +97,9 @@ void ShowLoadJSONConfig()
   Serial.println("-------------------- COLOR END ----------------------");
   Serial.println();
   Serial.println("-------------------- USER DATA -----------------------");
-  Serial.printf("####  HideNum: %d", UserText.hide_t);
-  Serial.println();
-  Serial.printf("####  CarNum: %d", UserText.carnum);
-  Serial.println();
-  Serial.printf("####  T1_OFFSET: %d", HCONF.T1_offset);
-  Serial.println();
-  Serial.printf("####  T2_OFFSET: %d", HCONF.T2_offset);
-  Serial.println();
+  Serial.printf("####  CarNum: %d \r\n", UserText.carnum);
+  Serial.printf("####  T1_OFFSET: %d \r\n", HCONF.T1_offset);
+  Serial.printf("####  T2_OFFSET: %d \r\n", HCONF.T2_offset);
   Serial.println("------------------ USER DATA END----------------------");
   Serial.println();
   Serial.println("---------------------- SYSTEM ------------------------");
@@ -140,6 +137,7 @@ void SaveConfig()
   doc["vol"] = HCONF.volume;
   doc["c_carnum"] = GetColorNum(&col_carnum);
   doc["c_date"] = GetColorNum(&col_date);
+  // doc["c_day"] = GetColorNum(&col_day);
   doc["c_tempin"] = GetColorNum(&col_tempin);
   doc["c_tempout"] = GetColorNum(&col_tempout);
   doc["c_time"] = GetColorNum(&col_time);

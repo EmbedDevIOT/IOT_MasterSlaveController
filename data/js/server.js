@@ -54,6 +54,7 @@ function getConfig(information) {
                 document.getElementById("c_carnum").value = jsonBuf["c_carnum"];
                 document.getElementById("c_time").value = jsonBuf["c_time"];
                 document.getElementById("c_date").value = jsonBuf["c_date"];
+                // document.getElementById("c_day").value = jsonBuf["c_day"];
                 document.getElementById("c_tempin").value = jsonBuf["c_tempin"];
                 document.getElementById("c_tempout").value = jsonBuf["c_tempout"];
 
@@ -151,6 +152,7 @@ function BColUPD() {
     // buf += "CI=" + document.getElementById("c_infotext").value + "&";
     buf += "CT=" + document.getElementById("c_time").value + "&";
     buf += "CD=" + document.getElementById("c_date").value + "&";
+    // buf += "CDY=" + document.getElementById("c_day").value + "&";
     buf += "CTI=" + document.getElementById("c_tempin").value + "&";
     buf += "CTO=" + document.getElementById("c_tempout").value;
 

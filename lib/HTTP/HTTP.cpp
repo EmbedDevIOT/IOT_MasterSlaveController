@@ -217,11 +217,12 @@ void ColorUpdate()
 
   struct _col
   {
-    uint8_t CC = HTTP.arg("CC").toInt();
-    uint8_t CT = HTTP.arg("CT").toInt();
-    uint8_t CD = HTTP.arg("CD").toInt();
-    uint8_t CTI = HTTP.arg("CTI").toInt();
-    uint8_t CTO = HTTP.arg("CTO").toInt();
+    uint8_t CC = HTTP.arg("CC").toInt();    // color car num
+    uint8_t CT = HTTP.arg("CT").toInt();    // color time
+    uint8_t CD = HTTP.arg("CD").toInt();    // color date
+    // uint8_t CDY = HTTP.arg("CDY").toInt();   // color day weeks
+    uint8_t CTI = HTTP.arg("CTI").toInt();  // color temp IN
+    uint8_t CTO = HTTP.arg("CTO").toInt();  // color temp OUT
   } C;
 
   // #ifndef DEBUG
@@ -242,6 +243,7 @@ void ColorUpdate()
   ColorSet(&col_carnum, C.CC);
   ColorSet(&col_time, C.CT);
   ColorSet(&col_date, C.CD);
+  // ColorSet(&col_day, C.CDY);
   ColorSet(&col_tempin, C.CTI);
   ColorSet(&col_tempout, C.CTO);
 

@@ -1,6 +1,24 @@
 #include "Config.h"
+
+//==========================================================================
+void ColorSetHEX(struct color *C, uint8_t _color)
+{
+  // switch (_color)
+  // {
+  // case RED:
+  //   C->hex = 0xFF0000;
+  //   break;
+  // case GREEN:
+  //   C->hex = 0x00FF00;
+  //   break;
+
+  // default:
+  //   break;
+  // }
+}
 //==========================================================================
 
+//==========================================================================
 void ColorSet(struct color *CS, uint8_t _color)
 {
   switch (_color)
@@ -9,48 +27,56 @@ void ColorSet(struct color *CS, uint8_t _color)
     CS->R = 255;
     CS->G = 0;
     CS->B = 0;
+    CS->hex = 0xFF0000;
     break;
 
   case GREEN:
     CS->R = 0;
     CS->G = 255;
     CS->B = 0;
+    CS->hex = 0x00FF00;
     break;
 
   case BLUE:
     CS->R = 0;
     CS->G = 0;
     CS->B = 255;
+    CS->hex = 0x0000FF;
     break;
 
   case BLACK:
     CS->R = 0;
     CS->G = 0;
     CS->B = 0;
+    CS->hex = 0x000000;
     break;
 
   case WHITE:
     CS->R = 255;
     CS->G = 255;
     CS->B = 255;
+    CS->hex = 0xFFFFFF;
     break;
 
   case SEA_WAVE:
     CS->R = 0;
     CS->G = 255;
     CS->B = 255;
+    CS->hex = 0x00FFFF;
     break;
 
   case YELLOW:
     CS->R = 255;
     CS->G = 255;
     CS->B = 0;
+    CS->hex = 0xFFFF00;
     break;
 
   case PURPLE:
     CS->R = 255;
     CS->G = 0;
     CS->B = 255;
+    CS->hex = 0xFF00FF;
     break;
 
   default:
@@ -95,6 +121,14 @@ void ColorWrite(char *buf, struct color *C)
   strcat(buf, "<B>");
   itoa(C->B, buf + strlen(buf), DEC);
   strcat(buf, "</B>\r\n");
+}
+//=======================================================================
+//=======================================================================
+// Writing color in HEX to buf
+void ColorWriteHEX(char *buf, struct color *C)
+{
+  // itoa(C->hex, buf + strlen(buf), HEX);
+  sprintf(buf, "%04X", C->hex);
 }
 //=======================================================================
 
@@ -194,11 +228,14 @@ void DebugInfo()
     Serial.println(message);
     sprintf(message, "RTC Date: %4d.%02d.%02d", Clock.year, Clock.month, Clock.date);
     Serial.println(message);
-
-    // sprintf(message, "T1: %0.1f T2: %0.1f", HCONF.dsT1, HCONF.dsT2);
-    // Serial.println(message);
-    // sprintf(message, "T1_OFS: %d T2_OFS: %d", HCONF.T1_offset, HCONF.T2_offset);
-    // Serial.println(message);
+    sprintf(message, "T1: %0.1f T2: %0.1f", HCONF.dsT1, HCONF.dsT2);
+    Serial.println(message);
+    sprintf(message, "T1_OFS: %d T2_OFS: %d", HCONF.T1_offset, HCONF.T2_offset);
+    Serial.println(message);
+    sprintf(message, "WC1: %d Color: %00006X", HCONF.wc1, col_wc.hex);
+    Serial.println(message);
+    sprintf(message, "WC2: %d Color: %00006X", HCONF.wc2, col_wc.hex);
+    Serial.println(message);
 
     // Serial.printf("SN:");
     // Serial.println(CFG.sn);
@@ -383,14 +420,13 @@ void Send_GPSdata()
   strcat(xml, "</gps_crc>\r\n");
   strcat(xml, "</gps_data>");
 
-  Serial.println(xml);
-  Serial.println();
   Serial2.println(xml);
   Serial2.println();
 }
 //=========================================================================
 
 //========================== Sending IT Protocol  =========================
+// Extended Board
 void Send_ITdata(uint8_t adr)
 {
   unsigned int crc;
@@ -414,7 +450,7 @@ void Send_ITdata(uint8_t adr)
     break;
   }
 
-  strcat(buf_crc, "<cabin_mode>0</cabin_mode>\r\n");
+  strcat(buf_crc, "<cabin_mode>1</cabin_mode>\r\n");
   strcat(buf_crc, "<TsizeDx>\r\n");
   strcat(buf_crc, "<X>128</X>\r\n");
   strcat(buf_crc, "<Y>64</Y>\r\n");
@@ -621,6 +657,7 @@ void Send_ITdata(uint8_t adr)
 //=========================================================================
 
 //========================== Sending BS Protocol  =========================
+// Internal Board
 void Send_BSdata(uint8_t adr)
 {
   // memset(UserText.carname, 0, strlen(UserText.carname));
@@ -643,14 +680,42 @@ void Send_BSdata(uint8_t adr)
   default:
     break;
   }
-  strcat(buf, "<color_text>FF0000");
-  // ColorWrite(buf, &col_wc);
+  strcat(buf, "<color_text>");
+  char buf_col[7] = {0};
+  sprintf(buf_col, "%00006X", col_wc.hex);
+  strcat(buf, buf_col);
   strcat(buf, "</color_text>\r\n");
-  strcat(buf, "<color_route>FF0000");
-  // ColorWrite(buf, &col_carnum);
+  strcat(buf, "<color_date>");
+  memset(buf_col, 0, 7);
+  sprintf(buf_col, "%00006X", col_date.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_date>\r\n");
+  strcat(buf, "<color_day>FF0000</color_day>\r\n");
+  // memset(buf_col, 0, 7);
+  // sprintf(buf_col, "%00006X", col_day.hex);
+  // strcat(buf, buf_col);
+  // strcat(buf, "</color_day>\r\n");
+  strcat(buf, "<color_time>");
+  memset(buf_col, 0, 7);
+  sprintf(buf_col, "%00006X", col_time.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_time>\r\n");
+  strcat(buf, "<color_temp_in>");
+  memset(buf_col, 0, 7);
+  sprintf(buf_col, "%00006X", col_tempin.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_in>\r\n");
+  strcat(buf, "<color_temp_out>");
+  memset(buf_col, 0, 7);
+  sprintf(buf_col, "%00006X", col_tempout.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_out>\r\n");
+  strcat(buf, "<color_route>");
+  memset(buf_col, 0, 7);
+  sprintf(buf_col, "%00006X", col_carnum.hex);
+  strcat(buf, buf_col);
   strcat(buf, "</color_route>\r\n");
   strcat(buf, "<color_speed>FF0000");
-  // ColorWrite(buf, &col_speed);
   strcat(buf, "</color_speed>\r\n");
   strcat(buf, "<route_name>");
   if (UserText.hide_t == false)
@@ -671,15 +736,17 @@ void Send_BSdata(uint8_t adr)
   // CRC
   crc = CRC16_mb(buf, strlen(buf));
   strcat(xml, "<intboard_data>\r\n");
-  strcat(xml,buf);
+  strcat(xml, buf);
   strcat(xml, "<intboard_crc>");
   char crc_temp[5] = {0};
   sprintf(crc_temp, "%04X", crc);
   strcat(xml, crc_temp);
-  strcat(xml,"</intboard_crc>\r\n");
-  strcat(xml, "</intboard_data>\r\n");
+  strcat(xml, "</intboard_crc>\r\n");
+  strcat(xml, "</intboard_data>");
+  strcat(xml, "\r\n");
 
-  Serial2.println(xml);
+  Serial2.print(xml);
+  Serial2.println();
 }
 //=========================================================================
 

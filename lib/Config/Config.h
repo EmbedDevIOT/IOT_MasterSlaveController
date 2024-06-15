@@ -178,10 +178,12 @@ struct color
   int R;
   int G;
   int B;
+  long hex;
 };
 extern color col_carnum;
 extern color col_time;
 extern color col_date;
+extern color col_day;
 extern color col_tempin;
 extern color col_tempout;
 extern color col_wc;      // dynamic
@@ -191,6 +193,8 @@ extern color col_speed;   // dynamic
 //=======================================================================
 struct HardwareConfig
 {
+  bool wc1  = 0;
+  bool wc2 = 0;
   uint8_t volume = 50;
   int8_t bright = 70; // speed running text
   float dsT1 = 0.0;
@@ -228,6 +232,8 @@ extern Flag STATE;
 //============================================================================
 void ColorWrite(char *buf, struct color *C);
 void ColorSet(struct color *CS, uint8_t _color);
+// void ColorSetHEX(struct color *C, uint8_t _color);
+void ColorWriteHEX(char *buf, struct color *C);
 int GetColorNum(struct color *C);
 void UserPresetInit(void);
 void SystemInit(void);     //  System Initialisation (variables and structure)
