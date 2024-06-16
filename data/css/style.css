@@ -115,8 +115,15 @@ header .title p {
     margin-top: 30px;
     text-decoration: none;
 }
+.but_link_voice {
+    background: url(../img/check.svg) center/55% no-repeat;
+    background-position: -20px 0;
+    margin-top: 30px;
+}
+
 .wi-fi .but_link, .sys-settings .but_link {
     background: var(--bg)
+
 }
 
 

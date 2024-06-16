@@ -86,6 +86,8 @@ function getConfig(information) {
                 document.getElementById("t2_offset").value = jsonBuf["t2_offset"];
                 document.getElementById("brigh").value = jsonBuf["br"];
                 document.getElementById("volume").value = jsonBuf["vol"];
+                document.getElementById("wc_sens_signal").value = jsonBuf["wcss"];
+                document.getElementById("wc_sens_logiq").value = jsonBuf["wcsl"];
             }
             else if (information == "shortcut") {
                 document.getElementById("sn").value = jsonBuf["sn"];

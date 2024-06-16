@@ -22,5 +22,7 @@
    "t1_offset": 0,
    "t2_offset": 0,
    "br": 90,
-   "vol": 50
+   "vol": 50,
+   "wcsl": 2,
+   "wcss": 1
 }

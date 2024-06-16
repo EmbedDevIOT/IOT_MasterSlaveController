@@ -178,10 +178,51 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="settings_item" style="background: #F0F0F0">
+                    <div class="settings_inner">
+                        <div class="headline">
+                            <span>Настройки датчиков туалета</span>
+                        </div>
+                        <div class="label-text">
+                            <span>Логика туалетов</span>
+                        </div>
+                        <div class="input-group">
+                            <select class="input" id="wc_sens_logiq">
+                                <option value="0">Нормальная</option>
+                                <option value="1">Реверсивная</option>
+                                <option value="2">Один тамбур</option>
+                            </select>
+                        </div>
+
+                        <div class="label-text">
+                            <span>Сигнал занятости</span>
+                        </div>
+                        <div class="input-group">
+                            <select class="input" id="wc_sens_signal">
+                                <option value="1">Замкнут</option>
+                                <option value="0">Разомкнут</option>
+                            </select>
+                        </div>
+                        <div class="col d-grid gap-2">
+                            <button type="button" class="but but-save" style="background: #da8300"
+                                onclick="BWCLogiqUPD(this)">Сохранить настройки датчиков
+                            </button>
+                        </div>
+
+                        <div>
+                            <button type="button" class="but but_link" type="button" style="background: #15781d"
+                                    onclick="BDoorState(this)">Узнать статус WC
+                                </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <a href="index.html" class="but but_link" type="button"> Вернуться на главную страницу </a>
-            </div>
+        </div>
+
+        <div>
+            <a href="index.html" class="but but_link" type="button"> Вернуться на главную страницу </a>
+        </div>
         </div>
 
 
