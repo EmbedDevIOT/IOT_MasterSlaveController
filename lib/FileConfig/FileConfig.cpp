@@ -92,7 +92,8 @@ void ShowLoadJSONConfig()
   Serial.printf("####  TEMPIN: %d \r\n", GetColorNum(&col_tempin));
   Serial.printf("####  TEMPOUT: %d \r\n", GetColorNum(&col_tempout));
   Serial.printf("####  TIME: %d \r\n", GetColorNum(&col_time));
-  Serial.printf("####  WC: %d \r\n", GetColorNum(&col_wc));
+  Serial.printf("####  WC1: %d \r\n", GetColorNum(&col_wc1));
+  Serial.printf("####  WC2: %d \r\n", GetColorNum(&col_wc2));
   Serial.printf("####  SPEED: %d \r\n", GetColorNum(&col_speed));
   Serial.println("-------------------- COLOR END ----------------------");
   Serial.println();

@@ -136,7 +136,7 @@ void ColorWriteHEX(char *buf, struct color *C)
 void UserPresetInit()
 {
   ColorSet(&col_carnum, YELLOW);
-  ColorSet(&col_wc, GREEN);
+  ColorSet(&col_wc1, GREEN);
   ColorSet(&col_speed, WHITE);
   ColorSet(&col_time, WHITE);
   ColorSet(&col_date, WHITE);
@@ -232,9 +232,10 @@ void DebugInfo()
     Serial.println(message);
     sprintf(message, "T1_OFS: %d T2_OFS: %d", HCONF.T1_offset, HCONF.T2_offset);
     Serial.println(message);
-    sprintf(message, "WC1: %d Color: %00006X", HCONF.wc1, col_wc.hex);
+    sprintf(message, "WC1 | Sensor: %d State %d", STATE.SensWC1, STATE.StateWC1);
     Serial.println(message);
-    sprintf(message, "WC2: %d Color: %00006X", HCONF.wc2, col_wc.hex);
+    sprintf(message, "WC2 | Sensor: %d State %d", STATE.SensWC2, STATE.StateWC2);
+
     Serial.println(message);
 
     // Serial.printf("SN:");
@@ -286,7 +287,8 @@ void SystemFactoryReset()
   HCONF.T2_offset = 0;
 
   ColorSet(&col_carnum, WHITE);
-  ColorSet(&col_wc, GREEN);
+  ColorSet(&col_wc1, GREEN);
+  ColorSet(&col_wc2, GREEN);
   ColorSet(&col_time, WHITE);
   ColorSet(&col_date, WHITE);
   ColorSet(&col_tempin, GREEN);
@@ -682,7 +684,14 @@ void Send_BSdata(uint8_t adr)
   }
   strcat(buf, "<color_text>");
   char buf_col[9] = {0};
-  sprintf(buf_col, "%00006X", col_wc.hex);
+  if (adr == 1)
+  {
+    sprintf(buf_col, "%00006X", col_wc1.hex);
+  }
+  else if (adr == 2)
+  {
+    sprintf(buf_col, "%00006X", col_wc2.hex);
+  }
   strcat(buf, buf_col);
   strcat(buf, "</color_text>\r\n");
   strcat(buf, "<color_date>");

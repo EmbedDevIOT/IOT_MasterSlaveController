@@ -36,21 +36,21 @@
 #define OFF 0
 
 //======================    G P I O        =====================
-#define BTN_AI   36   // Analog Keyboard
+#define BTN_AI 36 // Analog Keyboard
 
-#define LED_WiFi 33   // Led State WiFi Connection
-#define LED_ST   12   // Status 
+#define LED_WiFi 33 // Led State WiFi Connection
+#define LED_ST 12   // Status
 
-#define T1 4          // Temperature sensor ds18b20 1
-#define T2 2          // Temperature sensor ds18b20 2
+#define T1 4 // Temperature sensor ds18b20 1
+#define T2 2 // Temperature sensor ds18b20 2
 
-#define WC1 39        // Pin status control WC 1
-#define WC2 34        // Pin status control WC 2
+#define WC1 39 // Pin status control WC 1
+#define WC2 34 // Pin status control WC 2
 
-#define SW1 19        // DIP Switch
-#define SW2 18        // DIP Switch 
+#define SW1 19 // DIP Switch
+#define SW2 18 // DIP Switch
 
-// I2S 
+// I2S
 // #define I2S_DOUT 23
 #define I2S_DOUT 27
 #define I2S_BCLK 26
@@ -62,7 +62,7 @@
 #define TX1_PIN 33 // UART1_TX
 #define RX1_PIN 32 // UART1_RX
 #endif
-#define DE_RE 35   // DE_MAX13444
+#define DE_RE 35 // DE_MAX13444
 
 // UART 2 - GPS -
 #define GPS_SERIAL2
@@ -72,13 +72,13 @@
 #endif
 //=======================================================================
 
-
 //=======================================================================
 extern MicroDS3231 RTC;
 extern DateTime Clock;
 //=======================================================================
 
 //========================== ENUMERATION ================================
+// COLOR DEFINITIONS
 enum C
 {
   RED = 0,
@@ -125,6 +125,21 @@ enum MONTH
   DECM,
 };
 
+// WC_STATE_LOGIQ
+enum _WCL
+{
+  NORMAL = 0,
+  REVERSE,
+  ONE_HALL
+};
+
+// WC_SENSOR_SIGNAL
+enum _WCSS
+{
+  SENSOR_OPEN = 0,
+  SENSOR_CLOSE,
+};
+
 //=======================================================================
 
 //=========================== GLOBAL CONFIG =============================
@@ -169,10 +184,11 @@ struct UserData
   char carname[17] = "";
   char wcname[13] = "Tуалет";
   int carnum = 0;
-  bool hide_t = false;  // Hidden car number text
+  bool hide_t = false; // Hidden car number text
 };
 extern UserData UserText;
 
+// Color config 
 struct color
 {
   int R;
@@ -186,21 +202,22 @@ extern color col_date;
 extern color col_day;
 extern color col_tempin;
 extern color col_tempout;
-extern color col_wc;      // dynamic
-extern color col_speed;   // dynamic
+extern color col_wc1;           // dynamic
+extern color col_wc2;         // dynamic
+extern color col_speed;     
 //=======================================================================
 
 //=======================================================================
 struct HardwareConfig
 {
-  bool wc1  = 0;
-  bool wc2 = 0;
-  uint8_t volume = 50;
-  int8_t bright = 70; // speed running text
-  float dsT1 = 0.0;
-  int8_t T1_offset = 0;
-  float dsT2 = 0.0;
-  int8_t T2_offset = 0;
+  uint8_t WCL = 0;          // WC_STATE_LOGIQ
+  bool WCSS = 0;            // WC_SENSOR_SIGNAL
+  uint8_t volume = 50;      // Volume  
+  int8_t bright = 70;       // Led Brightness 
+  float dsT1 = 0.0;         // Temperature T1 
+  int8_t T1_offset = 0;     // Temperature Offset T1 sensor
+  float dsT2 = 0.0;         // Temperature T2 
+  int8_t T2_offset = 0;     // Temperature Offset T2 sensor
   uint8_t ERRORcnt = 0;
 };
 extern HardwareConfig HCONF;
@@ -221,10 +238,14 @@ struct Flag
   bool RS : 1;
   bool Debug : 1;
   bool CurDebug : 1;
-  bool WiFiEnable : 1;
+  bool WiFiEnable : 1;  
   bool TTS : 1;        // Time to speech
   bool DSTS : 1;       // DoorState to speech
-  bool VolumeUPD : 1;  // Volume update 
+  bool VolumeUPD : 1;  // Volume update
+  bool SensWC1 = 0;    // Sensor WC1 current state
+  bool SensWC2 = 0;    // Sensor WC2 current state
+  bool StateWC1 = 0;   // General State WC_1 
+  bool StateWC2 = 0;   // General State WC_2 
 };
 extern Flag STATE;
 //============================================================================

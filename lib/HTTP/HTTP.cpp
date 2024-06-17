@@ -14,10 +14,11 @@ void HTTPinit()
   HTTP.on("/TextUPD", TextUpdate);
   HTTP.on("/ColUPD", ColorUpdate);
   HTTP.on("/SNUPD", SerialNumberUPD);
+  HTTP.on("/WCLUPD", WCLogiqUPD);
   HTTP.on("/WiFiUPD", SaveSecurity);
-  HTTP.on("/BRBT", Restart);           // Restart MCU
-  HTTP.on("/BTTS", TimeToSpeech);      // Tell me Date an Time
-  HTTP.on("/BDS", DoorStateToSpeech);   // Tell me Door state
+  HTTP.on("/BRBT", Restart);          // Restart MCU
+  HTTP.on("/BTTS", TimeToSpeech);     // Tell me Date an Time
+  HTTP.on("/BDS", DoorStateToSpeech); // Tell me Door state
   HTTP.on("/FW", ShowSystemInfo);
   HTTP.on("/BFRST", FactoryReset);               // Set default parametrs.
   HTTP.onNotFound([]() {                         // Event "Not Found"
@@ -188,16 +189,15 @@ void TextUpdate()
   }
 
   // #ifndef DEBUG
-    Serial.printf("Name: ");
-    Serial.printf(T.TN);
-    Serial.println(msg);
+  Serial.printf("Name: ");
+  Serial.printf(T.TN);
+  Serial.println(msg);
 
-    Serial.printf("CarNum: ");
-    Serial.println(T.TNU);
+  Serial.printf("CarNum: ");
+  Serial.println(T.TNU);
 
-
-    Serial.printf("Hide Carnum: %d", T.SWH);
-    Serial.println();
+  Serial.printf("Hide Carnum: %d", T.SWH);
+  Serial.println();
   // #endif
 
   // SaveConfig();
@@ -213,16 +213,14 @@ void TextUpdate()
 /*******************************************************************************************************/
 void ColorUpdate()
 {
-  char TempBuf[10];
-
   struct _col
   {
-    uint8_t CC = HTTP.arg("CC").toInt();    // color car num
-    uint8_t CT = HTTP.arg("CT").toInt();    // color time
-    uint8_t CD = HTTP.arg("CD").toInt();    // color date
+    uint8_t CC = HTTP.arg("CC").toInt(); // color car num
+    uint8_t CT = HTTP.arg("CT").toInt(); // color time
+    uint8_t CD = HTTP.arg("CD").toInt(); // color date
     // uint8_t CDY = HTTP.arg("CDY").toInt();   // color day weeks
-    uint8_t CTI = HTTP.arg("CTI").toInt();  // color temp IN
-    uint8_t CTO = HTTP.arg("CTO").toInt();  // color temp OUT
+    uint8_t CTI = HTTP.arg("CTI").toInt(); // color temp IN
+    uint8_t CTO = HTTP.arg("CTO").toInt(); // color temp OUT
   } C;
 
   // #ifndef DEBUG
@@ -256,6 +254,17 @@ void ColorUpdate()
   HTTP.send(200, "text/plain", "OK");
 }
 
+/*******************************************************************************************************/
+/*******************************************************************************************************/
+void WCLogiqUPD(void)
+{
+  HCONF.WCL = HTTP.arg("WCL").toInt();   // WC_STATE_LOGIQ
+  HCONF.WCSS = HTTP.arg("WCSS").toInt(); // WC_SENSOR_SIGNAL
+
+  Serial.printf("WCL: %d WCSS: %d \r\n", HCONF.WCL, HCONF.WCSS);
+  HTTP.send(200, "text/plain", "Serial Number set");
+}
+/*******************************************************************************************************/
 /*******************************************************************************************************/
 void SerialNumberUPD()
 {

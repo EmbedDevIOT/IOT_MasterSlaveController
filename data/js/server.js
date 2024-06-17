@@ -175,10 +175,20 @@ function BSysUPD() {
     buf += "VOL=" + document.getElementById("volume").value;
 
     xml.open("GET", "SysUPD" + buf, 1);
-    console.log(xml);
+    // console.log(xml);
     xml.send();
     alert("Настройки сохранены.");
 
+}
+
+function BWCLogiqUPD()
+{
+    let xml = new XMLHttpRequest();
+    let buf = "?";
+    buf += "WCL=" + document.getElementById("wc_sens_logiq").value + "&";
+    buf += "WCSS=" + document.getElementById("wc_sens_signal").value;
+    xml.open("GET", "WCLUPD" + buf, 1);
+    xml.send();
 }
 
 function BTellmeTime()

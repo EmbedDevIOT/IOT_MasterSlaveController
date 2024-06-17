@@ -14,6 +14,7 @@ void UpdateData(void);
 void SystemUpdate(void);
 void TextUpdate(void);
 void ColorUpdate(void);
+void WCLogiqUPD(void);
 void SerialNumberUPD(void);
 void SaveSecurity(void);
 void HandleClient(void);

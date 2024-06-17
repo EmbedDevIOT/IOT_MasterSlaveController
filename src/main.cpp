@@ -41,7 +41,8 @@ color col_date;
 color col_day;
 color col_tempin;
 color col_tempout;
-color col_wc;
+color col_wc1;
+color col_wc2;
 color col_speed;
 
 UserData UserText;
@@ -54,6 +55,7 @@ void HandlerTask500(void *pvParameters);
 void SendtoRS485();
 void GetDSData(void);
 bool GetWCState(uint8_t num);
+void SetColorWC();
 void UART_Recieve_Data();
 void Tell_me_CurrentTime();
 void Tell_me_CurrentData();
@@ -106,7 +108,6 @@ void setup()
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
 
-    ColorSet(&col_wc, GREEN);
     ColorSet(&col_speed, WHITE);
 
     LoadConfig();         // Load configuration from config.json files
@@ -183,7 +184,7 @@ void HandlerCore0(void *pvParameters)
 
         if (STATE.DSTS)
         {
-            Tell_me_DoorState(1);
+            Tell_me_DoorState(STATE.StateWC1);
             STATE.DSTS = false;
         }
 
@@ -220,12 +221,9 @@ void HandlerTask500(void *pvParameters)
     for (;;)
     {
         sec_cnt++;
-        HCONF.wc1 = GetWCState(WC1);
-        HCONF.wc2 = GetWCState(WC2);
-        if (HCONF.wc1)
-            ColorSet(&col_wc, RED);
-        else
-            ColorSet(&col_wc, GREEN);
+        STATE.SensWC1 = GetWCState(WC1);
+        STATE.SensWC2 = GetWCState(WC2);
+        SetColorWC();
 
         SendtoRS485();
         vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -250,9 +248,83 @@ bool GetWCState(uint8_t num)
     default:
         break;
     }
-    return !state;
+    HCONF.WCSS == SENSOR_OPEN ? state : state = !state;
+    return state;
 }
+//=========================================================================
+void SetColorWC()
+{
+    switch (HCONF.WCL)
+    {
+    case NORMAL:
+        if (STATE.SensWC1)
+        {
+            STATE.StateWC1 = true;
+            ColorSet(&col_wc1, RED);
+        }
+        else
+        {
+            STATE.StateWC1 = false;
+            ColorSet(&col_wc1, GREEN);
+        }
 
+        if (STATE.SensWC2)
+        {
+            STATE.StateWC2 = true;
+            ColorSet(&col_wc2, RED);
+        }
+        else
+        {
+            STATE.StateWC2 = false;
+            ColorSet(&col_wc2, GREEN);
+        }
+        break;
+
+    case REVERSE:
+        if (STATE.SensWC1)
+        {
+            STATE.StateWC2 = true;
+            ColorSet(&col_wc2, RED);
+        }
+        else
+        {
+            STATE.StateWC2 = false;
+            ColorSet(&col_wc2, GREEN);
+        }
+
+        if (STATE.SensWC2)
+        {
+            STATE.StateWC1 = true;
+            ColorSet(&col_wc1, RED);
+        }
+        else
+        {
+            STATE.StateWC1 = false;
+            ColorSet(&col_wc1, GREEN);
+        }
+        break;
+
+    case ONE_HALL:
+        if (STATE.SensWC1 && STATE.SensWC2)
+        {
+            STATE.StateWC1 = true;
+            STATE.StateWC2 = true;
+            ColorSet(&col_wc1, RED);
+            ColorSet(&col_wc2, RED);
+        }
+        else
+        {
+            STATE.StateWC1 = false;
+            STATE.StateWC2 = false;
+            ColorSet(&col_wc1, RED);
+            ColorSet(&col_wc2, RED);
+        }
+        break;
+
+    default:
+        break;
+    }
+}
 //=========================================================================
 // Get Data from DS18B20 Sensor
 void GetDSData()
@@ -282,12 +354,19 @@ void SendtoRS485()
         if (STATE.StaticUPD && STATE.cnt_Supd < 2)
         {
             Send_ITdata(1);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            Send_ITdata(2);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+
         }
 
         if (!STATE.DUPDBlock)
         {
             vTaskDelay(100 / portTICK_PERIOD_MS);
             Send_BSdata(1);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+
+            Send_BSdata(2);
             vTaskDelay(100 / portTICK_PERIOD_MS);
             Send_GPSdata();
         }
