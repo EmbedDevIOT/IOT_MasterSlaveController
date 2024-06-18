@@ -198,10 +198,15 @@ function BTellmeTime()
     xml.send();
 }
 
-function BDoorState()
+function BDoorState(state)
 {
     let xml = new XMLHttpRequest();
-    xml.open("GET", "BDS", 1);
+    if(state == 1){
+        xml.open("GET", "BDS1", 1);
+    }
+    else if(state == 2){
+        xml.open("GET", "BDS2", 1);
+    }
     xml.send();
 }
 

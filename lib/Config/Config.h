@@ -240,7 +240,8 @@ struct Flag
   bool CurDebug : 1;
   bool WiFiEnable : 1;  
   bool TTS : 1;        // Time to speech
-  bool DSTS : 1;       // DoorState to speech
+  bool DSTS1 : 1;      // WC 1 DoorState to speech
+  bool DSTS2 : 1;      // WC 2 DoorState to speech
   bool VolumeUPD : 1;  // Volume update
   bool SensWC1 = 0;    // Sensor WC1 current state
   bool SensWC2 = 0;    // Sensor WC2 current state
@@ -268,7 +269,7 @@ void getTimeChar(char *array);
 void getDateChar(char *array);
 void Send_GPSdata();
 void Send_ITdata(uint8_t adr);
-void Send_BSdata(uint8_t adr);
+void Send_BSdata();
 
 void SendXMLUserData(char *msg);
 unsigned int CRC16_mb(char *buf, int len);

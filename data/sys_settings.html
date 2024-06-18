@@ -204,6 +204,17 @@
                                 <option value="0">Разомкнут</option>
                             </select>
                         </div>
+
+                        <div class="label-text">
+                            <span>Брать статус туалета инвалида с:</span>
+                        </div>
+                        <div class="input-group">
+                            <select class="input" id="wcis">
+                                <option value="1">Туалет 1</option>
+                                <option value="2">Туалет 2</option>
+                            </select>
+                        </div>
+
                         <div class="col d-grid gap-2">
                             <button type="button" class="but but-save" style="background: #da8300"
                                 onclick="BWCLogiqUPD(this)">Сохранить настройки датчиков
@@ -212,7 +223,12 @@
 
                         <div>
                             <button type="button" class="but but_link" type="button" style="background: #15781d"
-                                    onclick="BDoorState(this)">Узнать статус WC
+                                    onclick="BDoorState(1)"> Cтатус Туалет 1
+                                </button>
+                        </div>
+                        <div>
+                            <button type="button" class="but but_link" type="button" style="background: #15781d"
+                                    onclick="BDoorState(2)"> Cтатус Туалет 2
                                 </button>
                         </div>
                     </div>

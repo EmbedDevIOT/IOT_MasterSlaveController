@@ -16,9 +16,10 @@ void HTTPinit()
   HTTP.on("/SNUPD", SerialNumberUPD);
   HTTP.on("/WCLUPD", WCLogiqUPD);
   HTTP.on("/WiFiUPD", SaveSecurity);
-  HTTP.on("/BRBT", Restart);          // Restart MCU
-  HTTP.on("/BTTS", TimeToSpeech);     // Tell me Date an Time
-  HTTP.on("/BDS", DoorStateToSpeech); // Tell me Door state
+  HTTP.on("/BRBT", Restart);              // Restart MCU
+  HTTP.on("/BTTS", TimeToSpeech);         // Tell me Date an Time
+  HTTP.on("/BDS1", WC1DoorStateToSpeech); // Tell me Door state
+  HTTP.on("/BDS2", WC2DoorStateToSpeech); // Tell me Door state
   HTTP.on("/FW", ShowSystemInfo);
   HTTP.on("/BFRST", FactoryReset);               // Set default parametrs.
   HTTP.onNotFound([]() {                         // Event "Not Found"
@@ -311,9 +312,14 @@ void TimeToSpeech()
 }
 /*******************************************************************************************************/
 /*******************************************************************************************************/
-void DoorStateToSpeech()
+void WC1DoorStateToSpeech()
 {
-  STATE.DSTS = true;
+  STATE.DSTS1 = true;
+  HTTP.send(200, "text/plain", "OK");
+}
+void WC2DoorStateToSpeech()
+{
+  STATE.DSTS2 = true;
   HTTP.send(200, "text/plain", "OK");
 }
 /*******************************************************************************************************/

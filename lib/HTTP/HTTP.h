@@ -20,7 +20,8 @@ void SaveSecurity(void);
 void HandleClient(void);
 void Restart(void);
 void TimeToSpeech();
-void DoorStateToSpeech();
+void WC1DoorStateToSpeech();
+void WC2DoorStateToSpeech();
 void FactoryReset(void);
 void ShowSystemInfo(void);
 

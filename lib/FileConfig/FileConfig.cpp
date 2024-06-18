@@ -38,6 +38,8 @@ void LoadConfig()
 
   HCONF.bright = doc["br"];
   HCONF.volume = doc["vol"];
+  HCONF.WCL = doc["wcsl"];
+  HCONF.WCSS = doc["wcss"];
 
   ColorSet(&col_carnum, doc["c_carnum"]);
   ColorSet(&col_date, doc["c_date"]);
@@ -92,8 +94,8 @@ void ShowLoadJSONConfig()
   Serial.printf("####  TEMPIN: %d \r\n", GetColorNum(&col_tempin));
   Serial.printf("####  TEMPOUT: %d \r\n", GetColorNum(&col_tempout));
   Serial.printf("####  TIME: %d \r\n", GetColorNum(&col_time));
-  Serial.printf("####  WC1: %d \r\n", GetColorNum(&col_wc1));
-  Serial.printf("####  WC2: %d \r\n", GetColorNum(&col_wc2));
+  Serial.printf("####  WCL: %d \r\n", HCONF.WCL);
+  Serial.printf("####  WCSS: %d \r\n", HCONF.WCSS);
   Serial.printf("####  SPEED: %d \r\n", GetColorNum(&col_speed));
   Serial.println("-------------------- COLOR END ----------------------");
   Serial.println();
@@ -136,6 +138,9 @@ void SaveConfig()
 
   doc["br"] = HCONF.bright;
   doc["vol"] = HCONF.volume;
+  doc["wcsl"] = HCONF.WCL;
+  doc["wcss"] = HCONF.WCSS;
+  
   doc["c_carnum"] = GetColorNum(&col_carnum);
   doc["c_date"] = GetColorNum(&col_date);
   // doc["c_day"] = GetColorNum(&col_day);

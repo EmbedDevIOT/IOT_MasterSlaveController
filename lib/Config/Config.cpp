@@ -163,7 +163,8 @@ void SystemInit(void)
   STATE.CurDebug = false;
   STATE.WiFiEnable = true;
   STATE.TTS = false;
-  STATE.DSTS = false;
+  STATE.DSTS1 = false;
+  STATE.DSTS2 = false;
   STATE.VolumeUPD = false;
 
   GetChipID();
@@ -234,8 +235,11 @@ void DebugInfo()
     Serial.println(message);
     sprintf(message, "WC1 | Sensor: %d State %d", STATE.SensWC1, STATE.StateWC1);
     Serial.println(message);
+    sprintf(message, "WC1 | Color: %d", GetColorNum(&col_wc1));
+    Serial.println(message);
     sprintf(message, "WC2 | Sensor: %d State %d", STATE.SensWC2, STATE.StateWC2);
-
+    Serial.println(message);
+    sprintf(message, "WC2 | Color: %d", GetColorNum(&col_wc2));
     Serial.println(message);
 
     // Serial.printf("SN:");
@@ -489,7 +493,7 @@ void Send_ITdata(uint8_t adr)
   strcat(buf_crc, "</size>\r\n");
   strcat(buf_crc, "<color>\r\n");
   // Carnum Color
-  ColorWrite(buf_crc, &col_carnum);
+  // ColorWrite(buf_crc, &col_carnum);
   // Carnum color END
   strcat(buf_crc, "</color>\r\n");
   strcat(buf_crc, "<bgcolor>\r\n");
@@ -660,7 +664,7 @@ void Send_ITdata(uint8_t adr)
 
 //========================== Sending BS Protocol  =========================
 // Internal Board
-void Send_BSdata(uint8_t adr)
+void Send_BSdata()
 {
   // memset(UserText.carname, 0, strlen(UserText.carname));
   unsigned int crc = 0;
@@ -668,30 +672,12 @@ void Send_BSdata(uint8_t adr)
   char buf[1024] = "";
   char xml[1024] = "";
 
-  switch (adr)
-  {
-  case 1:
-    strcat(buf, "<adr id=\"1\">\r\n");
-    break;
-  case 2:
-    strcat(buf, "<adr id=\"2\">\r\n");
-    break;
-  case 3:
-    strcat(buf, "<adr id=\"3\">\r\n");
-    break;
-  default:
-    break;
-  }
+  strcat(buf, "<adr id=\"1\">\r\n");
+
   strcat(buf, "<color_text>");
   char buf_col[9] = {0};
-  if (adr == 1)
-  {
-    sprintf(buf_col, "%00006X", col_wc1.hex);
-  }
-  else if (adr == 2)
-  {
-    sprintf(buf_col, "%00006X", col_wc2.hex);
-  }
+
+  sprintf(buf_col, "%00006X", col_wc1.hex);
   strcat(buf, buf_col);
   strcat(buf, "</color_text>\r\n");
   strcat(buf, "<color_date>");
@@ -738,10 +724,65 @@ void Send_BSdata(uint8_t adr)
     strcat(buf, UserText.carname);
   }
   strcat(buf, "</route_name>\r\n");
-
   strcat(buf, "<text_bs>Туалет");
   strcat(buf, "</text_bs>\r\n");
   strcat(buf, "</adr>\r\n");
+
+  strcat(buf, "<adr id=\"2\">\r\n");
+  strcat(buf, "<color_text>");
+
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_wc2.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_text>\r\n");
+  strcat(buf, "<color_date>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_date.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_date>\r\n");
+  strcat(buf, "<color_day>FF0000</color_day>\r\n");
+  // memset(buf_col, 0, 7);
+  // sprintf(buf_col, "%00006X", col_day.hex);
+  // strcat(buf, buf_col);
+  // strcat(buf, "</color_day>\r\n");
+  strcat(buf, "<color_time>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_time.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_time>\r\n");
+  strcat(buf, "<color_temp_in>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_tempin.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_in>\r\n");
+  strcat(buf, "<color_temp_out>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_tempout.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_out>\r\n");
+  strcat(buf, "<color_route>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_carnum.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_route>\r\n");
+  strcat(buf, "<color_speed>FF0000");
+  strcat(buf, "</color_speed>\r\n");
+  strcat(buf, "<route_name>");
+  if (UserText.hide_t == false)
+  {
+    strcat(buf, UserText.carname);
+    strcat(buf, " ");
+    itoa(UserText.carnum, buf + strlen(buf), DEC);
+  }
+  else
+  {
+    strcat(buf, UserText.carname);
+  }
+  strcat(buf, "</route_name>\r\n");
+  strcat(buf, "<text_bs>Туалет");
+  strcat(buf, "</text_bs>\r\n");
+  strcat(buf, "</adr>\r\n");
+
   // CRC
   crc = CRC16_mb(buf, strlen(buf));
   strcat(xml, "<intboard_data>\r\n");

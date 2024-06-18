@@ -72,8 +72,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.1";
-    CFG.fwdate = "15.06.2024";
+    CFG.fw = "0.1.2";
+    CFG.fwdate = "18.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -182,10 +182,16 @@ void HandlerCore0(void *pvParameters)
             STATE.TTS = false;
         }
 
-        if (STATE.DSTS)
+        if (STATE.DSTS1)
         {
             Tell_me_DoorState(STATE.StateWC1);
-            STATE.DSTS = false;
+            STATE.DSTS1 = false;
+        }
+        
+        if (STATE.DSTS2)
+        {
+            Tell_me_DoorState(STATE.StateWC2);
+            STATE.DSTS2 = false;
         }
 
         if (STATE.VolumeUPD)
@@ -226,7 +232,7 @@ void HandlerTask500(void *pvParameters)
         SetColorWC();
 
         SendtoRS485();
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(300 / portTICK_PERIOD_MS);
     }
 }
 //=======================================================================
@@ -316,8 +322,8 @@ void SetColorWC()
         {
             STATE.StateWC1 = false;
             STATE.StateWC2 = false;
-            ColorSet(&col_wc1, RED);
-            ColorSet(&col_wc2, RED);
+            ColorSet(&col_wc1, GREEN);
+            ColorSet(&col_wc2, GREEN);
         }
         break;
 
@@ -362,11 +368,7 @@ void SendtoRS485()
 
         if (!STATE.DUPDBlock)
         {
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_BSdata(1);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-
-            Send_BSdata(2);
+            Send_BSdata();
             vTaskDelay(100 / portTICK_PERIOD_MS);
             Send_GPSdata();
         }
