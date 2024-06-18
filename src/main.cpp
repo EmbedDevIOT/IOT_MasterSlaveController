@@ -187,7 +187,7 @@ void HandlerCore0(void *pvParameters)
             Tell_me_DoorState(STATE.StateWC1);
             STATE.DSTS1 = false;
         }
-        
+
         if (STATE.DSTS2)
         {
             Tell_me_DoorState(STATE.StateWC2);
@@ -311,20 +311,28 @@ void SetColorWC()
         break;
 
     case ONE_HALL:
-        if (STATE.SensWC1 && STATE.SensWC2)
+        if (HCONF.WCSS)
         {
-            STATE.StateWC1 = true;
-            STATE.StateWC2 = true;
-            ColorSet(&col_wc1, RED);
-            ColorSet(&col_wc2, RED);
+            if (STATE.SensWC1 && STATE.SensWC2)
+            {
+                STATE.StateWC1 = true;
+                STATE.StateWC2 = true;
+                ColorSet(&col_wc1, RED);
+                ColorSet(&col_wc2, RED);
+            }
+            else
+            {
+                STATE.StateWC1 = false;
+                STATE.StateWC2 = false;
+                ColorSet(&col_wc1, GREEN);
+                ColorSet(&col_wc2, GREEN);
+            }
         }
         else
         {
-            STATE.StateWC1 = false;
-            STATE.StateWC2 = false;
-            ColorSet(&col_wc1, GREEN);
-            ColorSet(&col_wc2, GREEN);
+            #error
         }
+
         break;
 
     default:
@@ -363,7 +371,6 @@ void SendtoRS485()
             vTaskDelay(500 / portTICK_PERIOD_MS);
             Send_ITdata(2);
             vTaskDelay(500 / portTICK_PERIOD_MS);
-
         }
 
         if (!STATE.DUPDBlock)
