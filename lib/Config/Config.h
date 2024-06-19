@@ -151,7 +151,7 @@ struct GlobalConfig
   String chipID = "";
   String MacAdr = "";
   String NTPServer = "pool.ntp.org";
-  String APSSID = "0845-0";
+  String APSSID = "0845";
   String APPAS = "retra0845zxc";
 
   String Ssid = "MkT";           // SSID Wifi network
@@ -202,8 +202,8 @@ extern color col_date;
 extern color col_day;
 extern color col_tempin;
 extern color col_tempout;
-extern color col_wc1;           // dynamic
-extern color col_wc2;         // dynamic
+extern color col_wc1;           // dynamic update
+extern color col_wc2;           // dynamic update
 extern color col_speed;     
 //=======================================================================
 
@@ -211,7 +211,7 @@ extern color col_speed;
 struct HardwareConfig
 {
   uint8_t WCL = 0;          // WC_STATE_LOGIQ
-  bool WCSS = 0;            // WC_SENSOR_SIGNAL
+  uint8_t WCSS = 0;         // WC_SENSOR_SIGNAL
   uint8_t volume = 50;      // Volume  
   int8_t bright = 70;       // Led Brightness 
   float dsT1 = 0.0;         // Temperature T1 
@@ -254,8 +254,6 @@ extern Flag STATE;
 //============================================================================
 void ColorWrite(char *buf, struct color *C);
 void ColorSet(struct color *CS, uint8_t _color);
-// void ColorSetHEX(struct color *C, uint8_t _color);
-void ColorWriteHEX(char *buf, struct color *C);
 int GetColorNum(struct color *C);
 void UserPresetInit(void);
 void SystemInit(void);     //  System Initialisation (variables and structure)

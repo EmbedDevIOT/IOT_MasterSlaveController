@@ -10,6 +10,7 @@ void HTTPinit()
   HTTP.begin();
   // ElegantOTA.begin(&HTTP); // Start ElegantOTA
   HTTP.on("/update.json", UpdateData);
+  HTTP.on("/wcupd.json", UpdateStateWC);
   HTTP.on("/SysUPD", SystemUpdate);
   HTTP.on("/TextUPD", TextUpdate);
   HTTP.on("/ColUPD", ColorUpdate);
@@ -88,6 +89,21 @@ void UpdateData()
   buf += "}";
 
   HTTP.send(200, "text/plain", buf);
+}
+/*******************************************************************************************************/
+
+/*******************************************************************************************************/
+void UpdateStateWC()
+{
+  String buf = "{";
+  buf += "\"st_wc1\":";
+  buf += STATE.StateWC1;
+  buf += ",";
+  buf += "\"st_wc2\":";
+  buf += STATE.StateWC2;
+  buf += "}";
+  HTTP.send(200, "text/plain", buf);
+
 }
 /*******************************************************************************************************/
 
@@ -216,12 +232,13 @@ void ColorUpdate()
 {
   struct _col
   {
+    // uint8_t CDY = HTTP.arg("CDY").toInt();   // color day weeks
     uint8_t CC = HTTP.arg("CC").toInt(); // color car num
     uint8_t CT = HTTP.arg("CT").toInt(); // color time
     uint8_t CD = HTTP.arg("CD").toInt(); // color date
-    // uint8_t CDY = HTTP.arg("CDY").toInt();   // color day weeks
     uint8_t CTI = HTTP.arg("CTI").toInt(); // color temp IN
     uint8_t CTO = HTTP.arg("CTO").toInt(); // color temp OUT
+    uint8_t CSP = HTTP.arg("CSP").toInt(); // color speed
   } C;
 
   // #ifndef DEBUG
@@ -245,6 +262,7 @@ void ColorUpdate()
   // ColorSet(&col_day, C.CDY);
   ColorSet(&col_tempin, C.CTI);
   ColorSet(&col_tempout, C.CTO);
+  ColorSet(&col_speed, C.CSP);
 
   SaveConfig();
   STATE.StaticUPD = true;
@@ -262,6 +280,7 @@ void WCLogiqUPD(void)
   HCONF.WCL = HTTP.arg("WCL").toInt();   // WC_STATE_LOGIQ
   HCONF.WCSS = HTTP.arg("WCSS").toInt(); // WC_SENSOR_SIGNAL
 
+  SaveConfig();
   Serial.printf("WCL: %d WCSS: %d \r\n", HCONF.WCL, HCONF.WCSS);
   HTTP.send(200, "text/plain", "Serial Number set");
 }
@@ -272,7 +291,9 @@ void SerialNumberUPD()
   CFG.sn = HTTP.arg("sn").toInt();
   Serial.printf("SN:");
   Serial.println(CFG.sn);
-  EEP_Write();
+  SaveConfig();
+
+  // EEP_Write();
   HTTP.send(200, "text/plain", "Serial Number set");
 }
 /*******************************************************************************************************/

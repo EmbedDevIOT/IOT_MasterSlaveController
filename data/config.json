@@ -2,7 +2,7 @@
    "sn": 0,
    "firmware":"0.6",
 
-   "ssid": "0845-0",
+   "ssid": "0845",
    "pass": "retra0845zxc",
    "ip1": 192,
    "ip2": 168,
@@ -16,6 +16,8 @@
    "c_carnum" : 6,
    "c_time" : 5,
    "c_date" : 5,
+   "c_day" : 5,
+   "c_speed" : 6,
    "c_tempin" : 1,
    "c_tempout" : 2,
    

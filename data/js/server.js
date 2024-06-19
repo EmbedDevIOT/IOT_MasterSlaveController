@@ -13,6 +13,7 @@ function StartNetConfig() {
 function StartSystem() {
     getConfig("system");
     getUpdate();
+    getUpdateWC();
 }
 
 // Start "System"
@@ -111,7 +112,32 @@ function getUpdate() {
         document.getElementById("date").value = Pars["d"];
         document.getElementById("time").value = Pars["t"];
     }
-    // setTimeout("getUpdate()", 1000);
+}
+
+function getUpdateWC() {
+    let xml = new XMLHttpRequest();
+    xml.open("GET", "wcupd.json", 1);
+    xml.send();
+    xml.onload = function () {
+        let Pars = JSON.parse(xml.responseText);
+        if (Pars["st_wc1"] == 1) {
+            document.getElementById("btn_wc1").classList.remove("but_link_green");
+            document.getElementById("btn_wc1").classList.add("but_link_red");
+        }
+        else {
+            document.getElementById("btn_wc1").classList.remove("but_link_red");
+            document.getElementById("btn_wc1").classList.add("but_link_green");
+        }
+        if (Pars["st_wc2"] == 1) {
+            document.getElementById("btn_wc2").classList.remove("but_link_green");
+            document.getElementById("btn_wc2").classList.add("but_link_red");
+        }
+        else {
+            document.getElementById("btn_wc2").classList.remove("but_link_red");
+            document.getElementById("btn_wc2").classList.add("but_link_green");
+        }
+    }
+    setTimeout("getUpdateWC()", 1000);
 }
 
 
@@ -151,12 +177,12 @@ function BColUPD() {
     let buf = "?";
 
     buf += "CC=" + document.getElementById("c_carnum").value + "&";
-    // buf += "CI=" + document.getElementById("c_infotext").value + "&";
     buf += "CT=" + document.getElementById("c_time").value + "&";
     buf += "CD=" + document.getElementById("c_date").value + "&";
     // buf += "CDY=" + document.getElementById("c_day").value + "&";
     buf += "CTI=" + document.getElementById("c_tempin").value + "&";
-    buf += "CTO=" + document.getElementById("c_tempout").value;
+    buf += "CTO=" + document.getElementById("c_tempout").value + "&";
+    buf += "CSP=" + document.getElementById("c_speed").value;
 
     xml.open("GET", "ColUPD" + buf, 1);
     xml.send();
@@ -181,8 +207,7 @@ function BSysUPD() {
 
 }
 
-function BWCLogiqUPD()
-{
+function BWCLogiqUPD() {
     let xml = new XMLHttpRequest();
     let buf = "?";
     buf += "WCL=" + document.getElementById("wc_sens_logiq").value + "&";
@@ -191,20 +216,18 @@ function BWCLogiqUPD()
     xml.send();
 }
 
-function BTellmeTime()
-{
+function BTellmeTime() {
     let xml = new XMLHttpRequest();
     xml.open("GET", "BTTS", 1);
     xml.send();
 }
 
-function BDoorState(state)
-{
+function BDoorState(state) {
     let xml = new XMLHttpRequest();
-    if(state == 1){
+    if (state == 1) {
         xml.open("GET", "BDS1", 1);
     }
-    else if(state == 2){
+    else if (state == 2) {
         xml.open("GET", "BDS2", 1);
     }
     xml.send();
@@ -265,9 +288,9 @@ function FactoryReset() {
         let msg = "Изменения сохранены! Табло уже перезагружается (займёт 15сек).\r\n";
         msg += "Настройки установлены по умолчанию:\r\n";
         msg += "Имя сети: ";
-        msg += "retra0846 \r\n";
+        msg += "retra0845 \r\n";
         msg += "Пароль: ";
-        msg += "retra0846zxc\r\n";
+        msg += "retra0845zxc\r\n";
         alert(msg);
 
     }

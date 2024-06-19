@@ -43,10 +43,11 @@ void LoadConfig()
 
   ColorSet(&col_carnum, doc["c_carnum"]);
   ColorSet(&col_date, doc["c_date"]);
-  // ColorSet(&col_day, doc["c_date"]);
+  ColorSet(&col_day, doc["c_day"]);
   ColorSet(&col_tempin, doc["c_tempin"]);
   ColorSet(&col_tempout, doc["c_tempout"]);
   ColorSet(&col_time, doc["c_time"]);
+  ColorSet(&col_time, doc["c_speed"]);
 
   doc["carname"].as<String>().toCharArray(T.TN, 17);
   memset(UserText.carname, 0, strlen(UserText.carname));
@@ -90,12 +91,10 @@ void ShowLoadJSONConfig()
   Serial.println("---------------------- COLOR ------------------------");
   Serial.printf("####  CARNUM: %d \r\n", GetColorNum(&col_carnum));
   Serial.printf("####  DATE: %d \r\n", GetColorNum(&col_date));
-  // Serial.printf("####  DAY: %d \r\n", GetColorNum(&col_day));
+  Serial.printf("####  DAY: %d \r\n", GetColorNum(&col_day));
   Serial.printf("####  TEMPIN: %d \r\n", GetColorNum(&col_tempin));
   Serial.printf("####  TEMPOUT: %d \r\n", GetColorNum(&col_tempout));
   Serial.printf("####  TIME: %d \r\n", GetColorNum(&col_time));
-  Serial.printf("####  WCL: %d \r\n", HCONF.WCL);
-  Serial.printf("####  WCSS: %d \r\n", HCONF.WCSS);
   Serial.printf("####  SPEED: %d \r\n", GetColorNum(&col_speed));
   Serial.println("-------------------- COLOR END ----------------------");
   Serial.println();
@@ -120,6 +119,8 @@ void ShowLoadJSONConfig()
   Serial.println(F(msg));
   Serial.printf("####  Brigh: %d \r\n", HCONF.bright);
   Serial.printf("####  Volume: %d \r\n", HCONF.volume);
+  Serial.printf("####  WCL: %d \r\n", HCONF.WCL);
+  Serial.printf("####  WCSS: %d \r\n", HCONF.WCSS);
   Serial.printf("####  SN: %d", CFG.sn);
   Serial.printf(" FW:");
   Serial.print(CFG.fw);
@@ -140,17 +141,17 @@ void SaveConfig()
   doc["vol"] = HCONF.volume;
   doc["wcsl"] = HCONF.WCL;
   doc["wcss"] = HCONF.WCSS;
-  
+
   doc["c_carnum"] = GetColorNum(&col_carnum);
   doc["c_date"] = GetColorNum(&col_date);
-  // doc["c_day"] = GetColorNum(&col_day);
+  doc["c_day"] = GetColorNum(&col_day);
   doc["c_tempin"] = GetColorNum(&col_tempin);
   doc["c_tempout"] = GetColorNum(&col_tempout);
   doc["c_time"] = GetColorNum(&col_time);
+  doc["c_speed"] = GetColorNum(&col_speed);
 
   doc["carname"] = String(UserText.carname);
   doc["carnum"] = UserText.carnum;
-  // doc["date"] = String(Clock.year) + "-" + ((Clock.month < 10) ? "0" : "") + String(Clock.month) + "-" + ((Clock.date < 10) ? "0" : "") + String(Clock.date);
   doc["firmware"] = CFG.fw;
   doc["hide"] = UserText.hide_t;
   doc["ip1"] = CFG.IP1;
@@ -162,13 +163,7 @@ void SaveConfig()
   doc["ssid"] = CFG.APSSID;
   doc["t1_offset"] = HCONF.T1_offset;
   doc["t2_offset"] = HCONF.T2_offset;
-  // doc["time"] = ((Clock.hour < 10) ? "0" : "") + String(Clock.hour) + ":" + ((Clock.minute < 10) ? "0" : "") + String(Clock.minute);
 
-  // serializeJson(doc, Serial);
-  // Serial.println();
-
-  // serializeJsonPretty(doc, Serial);
-  // Serial.println();
 
   File configFile = SPIFFS.open("/config.json", "w");
   serializeJson(doc, configFile); // Writing json string to file

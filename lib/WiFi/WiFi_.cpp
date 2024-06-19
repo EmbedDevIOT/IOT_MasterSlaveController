@@ -10,7 +10,7 @@ void WIFIinit(boolean mode)
    if (CFG.WiFiMode == 0)
    {
       Serial.print("SSID=");
-      Serial.println(CFG.Ssid.c_str());
+      Serial.print(CFG.Ssid.c_str());
       Serial.print("PASS=");
       Serial.println(CFG.Password.c_str());
 
@@ -20,7 +20,7 @@ void WIFIinit(boolean mode)
 
       WiFi.disconnect();
       WiFi.mode(WIFI_STA);
-      
+
       byte tries = 6;
 
       WiFi.begin(CFG.Ssid.c_str(), CFG.Password.c_str());
@@ -37,11 +37,15 @@ void WIFIinit(boolean mode)
          Serial.println(WiFi.localIP());
       }
    }
-   else 
+   else
    {
       char tmpssid[15];
       char tmppass[15];
+
       CFG.APSSID.toCharArray(tmpssid, 15);
+      strcat(tmpssid,"-");
+      itoa(CFG.sn, tmpssid + strlen(tmpssid), DEC); // склейка Имени WiFi + SN
+
       CFG.APPAS.toCharArray(tmppass, 15);
 
       IPAddress apIP(192, 168, 1, 1);

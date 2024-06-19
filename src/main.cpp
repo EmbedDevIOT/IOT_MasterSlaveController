@@ -72,8 +72,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.2";
-    CFG.fwdate = "18.06.2024";
+    CFG.fw = "0.1.3";
+    CFG.fwdate = "19.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -133,7 +133,6 @@ void setup()
         &TaskCore_0,
         0);
     vTaskDelay(500 / portTICK_PERIOD_MS);
-    // delay(500);
 
     xTaskCreatePinnedToCore(
         HandlerCore1,
@@ -199,7 +198,6 @@ void HandlerCore0(void *pvParameters)
             Amplifier.setVolume(HCONF.volume);
             STATE.VolumeUPD = false;
         }
-
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
@@ -214,7 +212,6 @@ void HandlerCore1(void *pvParameters)
         GetDSData();
         DebugInfo();
         // Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
-
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -230,7 +227,6 @@ void HandlerTask500(void *pvParameters)
         STATE.SensWC1 = GetWCState(WC1);
         STATE.SensWC2 = GetWCState(WC2);
         SetColorWC();
-
         SendtoRS485();
         vTaskDelay(300 / portTICK_PERIOD_MS);
     }
@@ -330,9 +326,21 @@ void SetColorWC()
         }
         else
         {
-            #error
+            if (!STATE.SensWC1 && !STATE.SensWC2)
+            {
+                STATE.StateWC1 = false;
+                STATE.StateWC2 = false;
+                ColorSet(&col_wc1, GREEN);
+                ColorSet(&col_wc2, GREEN);
+            }
+            else
+            {
+                STATE.StateWC1 = true;
+                STATE.StateWC2 = true;
+                ColorSet(&col_wc1, RED);
+                ColorSet(&col_wc2, RED);
+            }
         }
-
         break;
 
     default:

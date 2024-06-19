@@ -123,14 +123,6 @@ void ColorWrite(char *buf, struct color *C)
   strcat(buf, "</B>\r\n");
 }
 //=======================================================================
-//=======================================================================
-// Writing color in HEX to buf
-void ColorWriteHEX(char *buf, struct color *C)
-{
-  // itoa(C->hex, buf + strlen(buf), HEX);
-  sprintf(buf, "%04X", C->hex);
-}
-//=======================================================================
 
 //=======================================================================
 void UserPresetInit()
@@ -162,9 +154,9 @@ void SystemInit(void)
   STATE.Debug = true;
   STATE.CurDebug = false;
   STATE.WiFiEnable = true;
-  STATE.TTS = false;
-  STATE.DSTS1 = false;
-  STATE.DSTS2 = false;
+  STATE.TTS = false;          // Flag Start Time Speech
+  STATE.DSTS1 = false;        // Flag Start WC_1 Speech
+  STATE.DSTS2 = false;        // Flag Start WC_2 Speech
   STATE.VolumeUPD = false;
 
   GetChipID();
@@ -271,7 +263,7 @@ void SystemFactoryReset()
 {
   CFG.TimeZone = 3;
   CFG.WiFiMode = AccessPoint;
-  CFG.APSSID = "0845-0";
+  CFG.APSSID = "0845";
   CFG.APPAS = "retra0845zxc";
   CFG.IP1 = 192;
   CFG.IP2 = 168;
@@ -555,6 +547,7 @@ void Send_ITdata(uint8_t adr)
   strcat(buf_crc, "</bgcolor>\r\n");
   strcat(buf_crc, "<mode>0");
   strcat(buf_crc, "</mode>\r\n");
+  strcat(buf_crc, "<align>center</align>\r\n");
   strcat(buf_crc, "<direction>RTL</direction>\r\n");
   strcat(buf_crc, "<speed>10");
   strcat(buf_crc, "</speed>\r\n");

@@ -11,6 +11,7 @@ void HTTPinit();
 bool handleFileRead(String path);
 String getContentType(String filename);
 void UpdateData(void);
+void UpdateStateWC(void);
 void SystemUpdate(void);
 void TextUpdate(void);
 void ColorUpdate(void);

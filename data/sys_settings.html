@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="EmbedDev">
-    <title>Системные настройки табло 0840 (Wi-Fi GUI)</title>
+    <title>Системные настройки табло 0845 (Wi-Fi GUI)</title>
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/reset.css?v=2.1">
     <link rel="stylesheet" href="css/style.css?v=2.1">
@@ -18,7 +18,7 @@
             <div class="row">
                 <div>
                     <h2 class="title">
-                        Настройка табло Вагона-Ресторана (Wi-Fi GUI) v1.0
+                        Настройка табло (Wi-Fi GUI) v1.0
                         <p> Задайте нужные значения и нажмите "Сохранить системные настройки". Обновление информации на
                             табло займёт около 10с.</p>
                     </h2>
@@ -222,13 +222,13 @@
                         </div>
 
                         <div>
-                            <button type="button" class="but but_link" type="button" style="background: #15781d"
-                                    onclick="BDoorState(1)"> Cтатус Туалет 1
+                            <button type="button" class="but" id="btn_wc1" style="margin-top: 35px;"
+                                    onclick="BDoorState(1)">Озвучить Cтатус Туалет 1
                                 </button>
                         </div>
                         <div>
-                            <button type="button" class="but but_link" type="button" style="background: #15781d"
-                                    onclick="BDoorState(2)"> Cтатус Туалет 2
+                            <button type="button" class="but" id="btn_wc2" style="margin-top: 15px;"
+                                    onclick="BDoorState(2)">Озвучить Cтатус Туалет 2
                                 </button>
                         </div>
                     </div>
