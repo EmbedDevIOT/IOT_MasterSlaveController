@@ -3,6 +3,7 @@
 #include "WF.h"
 #include "FileConfig.h"
 #include "HTTP.h"
+#include "keyboard.h"
 
 #define DEBUG // Debug control ON
 //======================================================================
@@ -11,6 +12,7 @@
 uint8_t sec_cnt = 0;
 char buf[32] = {0}; // buffer for send message
 char umsg[30];      // buffer for user message
+uint16_t btn_value = 0;
 //======================================================================
 
 //================================ OBJECTs =============================
@@ -107,6 +109,8 @@ void setup()
 
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
+
+    pinMode(39,INPUT);
 
     ColorSet(&col_speed, WHITE);
 
@@ -212,6 +216,7 @@ void HandlerCore1(void *pvParameters)
         GetDSData();
         DebugInfo();
         // Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
+        Serial.printf("ADC %0004d \r\n", analogRead(39));
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -395,14 +400,16 @@ void SendtoRS485()
 //=========================================================================
 void ButtonHandler()
 {
-    Serial.println("#### FACTORY RESET ####");
-    SystemFactoryReset();
-    sprintf(umsg, "Сброшено");
-    SendXMLUserData(umsg);
-    // SaveConfig();
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    Serial.println("#### SAVE DONE ####");
-    ESP.restart();
+    // Serial.println("#### FACTORY RESET ####");
+    // SystemFactoryReset();
+    // sprintf(umsg, "Сброшено");
+    // SendXMLUserData(umsg);
+    // // SaveConfig();
+    // vTaskDelay(2000 / portTICK_PERIOD_MS);
+    // Serial.println("#### SAVE DONE ####");
+    // ESP.restart();
+    Serial.printf("ADC %0004d \r\n", analogRead(BTN_AI));
+
 }
 //=========================================================================
 
