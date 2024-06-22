@@ -13,9 +13,15 @@ uint8_t sec_cnt = 0;
 char buf[32] = {0}; // buffer for send message
 char umsg[30];      // buffer for user message
 uint16_t btn_value = 0;
+int btn_num = 0;
 //======================================================================
 
 //================================ OBJECTs =============================
+TaskHandle_t TaskCore_0;
+TaskHandle_t TaskCore_1;
+TaskHandle_t TaskCore1_500ms;
+TaskHandle_t TaskCore0_100ms;
+
 Audio Amplifier;
 MicroDS3231 RTC;
 
@@ -24,11 +30,9 @@ OneWire oneWire2(T2);
 DallasTemperature ds18b20_1(&oneWire1);
 DallasTemperature ds18b20_2(&oneWire2);
 
-TaskHandle_t TaskCore_0;
-TaskHandle_t TaskCore_1;
-TaskHandle_t Task500ms;
-
 HardwareSerial RS485(2);
+
+AnalogButtons analogButtons(KBD_PIN, INPUT);
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -51,9 +55,12 @@ UserData UserText;
 //=======================================================================
 
 //======================    FUNCTION PROTOTYPS     ======================
+// - FreeRTOS function --
 void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void HandlerTask500(void *pvParameters);
+void HandlerTaskKeyboard(void *pvParameters);
+void ButtonHandler();
 void SendtoRS485();
 void GetDSData(void);
 bool GetWCState(uint8_t num);
@@ -62,6 +69,24 @@ void UART_Recieve_Data();
 void Tell_me_CurrentTime();
 void Tell_me_CurrentData();
 void Tell_me_DoorState(bool state);
+
+// - buttons function --
+void btn1Click();
+void btn2Click();
+void btn3Click();
+void btn3Hold();
+void btn4Click();
+void btn5Click();
+void configure();
+
+Button b1 = Button(4095, &btn1Click);
+Button b2 = Button(1920, &btn2Click);
+Button b3 = Button(1230, &btn3Click, &btn3Hold);
+Button b4 = Button(870, &btn4Click);
+// get it activated (hold function invoked) only every 500ms
+// Button b4 = Button(929, &b4Click, &b4Hold, 1000, 500);
+Button b5 = Button(670, &btn5Click);
+
 //=======================================================================
 
 //=======================================================================
@@ -74,8 +99,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.3";
-    CFG.fwdate = "19.06.2024";
+    CFG.fw = "0.1.4";
+    CFG.fwdate = "22.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -91,8 +116,6 @@ void setup()
 
     // RTC INIT
     RTC.begin();
-    // RTC.setTime(COMPILE_TIME);
-    // Low battery / RTC battery crash / Set time compilations
     if (RTC.lostPower())
     {
         RTC.setTime(COMPILE_TIME);
@@ -110,7 +133,14 @@ void setup()
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
 
-    pinMode(39,INPUT);
+    Serial.println("Starting Analog buttons");
+    analogButtons.add(b1);
+    analogButtons.add(b2);
+    analogButtons.add(b3);
+    analogButtons.add(b4);
+    analogButtons.add(b5);
+
+    // pinMode(KBD_PIN, INPUT);
 
     ColorSet(&col_speed, WHITE);
 
@@ -139,6 +169,16 @@ void setup()
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
     xTaskCreatePinnedToCore(
+        HandlerTaskKeyboard,
+        "TaskCore0_100ms",
+        2048,
+        NULL,
+        1,
+        &TaskCore0_100ms,
+        0);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+
+    xTaskCreatePinnedToCore(
         HandlerCore1,
         "TaskCore_1",
         2048,
@@ -150,11 +190,11 @@ void setup()
 
     xTaskCreatePinnedToCore(
         HandlerTask500,
-        "Task500ms",
+        "TaskCore1_500ms",
         12000,
         NULL,
         1,
-        &Task500ms,
+        &TaskCore1_500ms,
         1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
 }
@@ -164,7 +204,8 @@ void setup()
 void loop()
 {
     HandleClient();
-    //   ButtonHandler();
+    analogButtons.check();
+    configure();
 }
 //=======================================================================
 
@@ -205,6 +246,19 @@ void HandlerCore0(void *pvParameters)
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
+
+// Core 0. Keyboard Handler
+void HandlerTaskKeyboard(void *pvParameters)
+{
+    Serial.print("Task: KBD T:100ms Stack:2048 Core:");
+    Serial.println(xPortGetCoreID());
+    for (;;)
+    {
+        // ButtonHandler();
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
 // Core 1. 1000ms
 void HandlerCore1(void *pvParameters)
 {
@@ -215,13 +269,12 @@ void HandlerCore1(void *pvParameters)
         Clock = RTC.getTime();
         GetDSData();
         DebugInfo();
-        // Serial.printf("AMP: %d \r\n", Amplifier.isRunning());
-        Serial.printf("ADC %0004d \r\n", analogRead(39));
+
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
-// Core 1. 1000ms
+// Core 1. 500ms
 void HandlerTask500(void *pvParameters)
 {
     Serial.print("Task:3 T:500ms Stack:12000 Core:");
@@ -233,7 +286,7 @@ void HandlerTask500(void *pvParameters)
         STATE.SensWC2 = GetWCState(WC2);
         SetColorWC();
         SendtoRS485();
-        vTaskDelay(300 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 //=======================================================================
@@ -396,10 +449,96 @@ void SendtoRS485()
     }
 }
 //=========================================================================
+void btn1Click()
+{
+    Serial.print("button 1 clicked");
+}
+void btn2Click()
+{
+    Serial.print("button 2 clicked");
+}
+void btn3Click()
+{
+    Serial.print("button 4 clicked");
+}
+void btn3Hold()
+{
+    Serial.print("button 3 held");
+}
+void btn4Click()
+{
+    Serial.print("button 4 clicked");
+}
+void btn5Click()
+{
+    Serial.print("button 5 clicked");
+}
 
+void configure()
+{
+    unsigned int value = analogRead(KBD_PIN);
+    Serial.println(value);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
+}
 //=========================================================================
 void ButtonHandler()
 {
+    uint8_t debug;
+
+    static int btn_cnt;
+
+    int btn_num_new = KButtonRead();
+
+    if (btn_num_new > 0)
+    {
+        Serial.println("Debug 1");
+        // btn_cnt = 0;
+
+        if (btn_num != btn_num_new)
+        {
+            btn_num = btn_num_new;
+
+            btn_cnt = 0;
+            Serial.println("Debug 2");
+            switch (btn_num)
+            {
+            case BT1:
+                Serial.println("Button 1 Pressed");
+                break;
+            case BT2:
+                Serial.println("Button 2 Pressed");
+                break;
+            case BT3:
+                Serial.println("Button 3 Pressed");
+                break;
+            case BT4:
+                Serial.println("Button 4 Pressed");
+                break;
+            case BT5:
+                Serial.println("Button 5 Pressed");
+                break;
+            default:
+                break;
+            }
+        }
+        else if (btn_num == btn_num_new)
+        {
+            // Serial.println("Debug 3");
+            while (KButtonRead() > 0)
+            {
+                btn_cnt++;
+                Serial.printf("Button %d Hold: %d \r\n", btn_num, btn_cnt);
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                if (btn_cnt == 20)
+                {
+                    btn_cnt = 0;
+                    Serial.printf("Reset \r\n");
+                }
+            }
+            btn_cnt = 0;
+        }
+    }
+
     // Serial.println("#### FACTORY RESET ####");
     // SystemFactoryReset();
     // sprintf(umsg, "Сброшено");
@@ -408,8 +547,7 @@ void ButtonHandler()
     // vTaskDelay(2000 / portTICK_PERIOD_MS);
     // Serial.println("#### SAVE DONE ####");
     // ESP.restart();
-    Serial.printf("ADC %0004d \r\n", analogRead(BTN_AI));
-
+    // Serial.printf("ADC %0004d \r\n", analogRead(KBD_PIN));
 }
 //=========================================================================
 

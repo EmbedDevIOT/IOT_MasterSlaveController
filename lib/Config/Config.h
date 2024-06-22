@@ -10,6 +10,7 @@
 #include "SPIFFS.h"
 #include <microDS3231.h>
 #include <ArduinoJson.h>
+#include <AnalogButtons.h>
 // #include <ElegantOTA.h>
 
 #include <OneWire.h>
@@ -36,7 +37,7 @@
 #define OFF 0
 
 //======================    G P I O        =====================
-#define BTN_AI 36 // Analog Keyboard
+#define KBD_PIN 36 // Pin Analog Keyboard
 
 #define LED_WiFi 33 // Led State WiFi Connection
 #define LED_ST 12   // Status
