@@ -372,7 +372,7 @@ void ShowSystemInfo()
 
   Serial.printf("System Information");
   sprintf(msg, "%s.%d", CFG.fw, CFG.sn);
-  SendXMLUserData(msg);
+  // SendXMLUserData(msg);
 
   HTTP.send(200, "text/plain", "OK"); // Oтправляем ответ Reset OK
 }

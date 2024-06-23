@@ -154,9 +154,9 @@ void SystemInit(void)
   STATE.Debug = true;
   STATE.CurDebug = false;
   STATE.WiFiEnable = true;
-  STATE.TTS = false;          // Flag Start Time Speech
-  STATE.DSTS1 = false;        // Flag Start WC_1 Speech
-  STATE.DSTS2 = false;        // Flag Start WC_2 Speech
+  STATE.TTS = false;   // Flag Start Time Speech
+  STATE.DSTS1 = false; // Flag Start WC_1 Speech
+  STATE.DSTS2 = false; // Flag Start WC_2 Speech
   STATE.VolumeUPD = false;
 
   GetChipID();
@@ -794,82 +794,126 @@ void Send_BSdata()
 //=========================================================================
 
 /*****************************************************************************************/
-void SendXMLUserData(char *msg)
+// msg1 - TOP zone  (YELLOW)
+// msg2 - BOT zone  (WHITE)
+void Send_BS_UserData(char *msg1, char *msg2)
 {
+  unsigned int crc = 0;
 
-  getTimeChar(CFG.time);
-  getDateChar(CFG.date);
+  char buf[1024] = "";
+  char xml[1024] = "";
 
-  unsigned int crc;
+  strcat(buf, "<adr id=\"1\">\r\n");
 
-  char buf_crc[256] = "";
-  char xml[256] = "";
+  strcat(buf, "<color_text>");
+  char buf_col[9] = {0};
 
-  if (CFG.TimeZone == 0)
-  {
-    strcat(buf_crc, "<gmt>");
-  }
-  else if (CFG.TimeZone < 0)
-  {
-    strcat(buf_crc, "<gmt>-");
-  }
-  else
-    strcat(buf_crc, "<gmt>+");
+  sprintf(buf_col, "%00006X", 0xFFFF00);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_text>\r\n");
+  strcat(buf, "<color_date>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_date.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_date>\r\n");
+  strcat(buf, "<color_day>FF0000</color_day>\r\n");
+  // memset(buf_col, 0, 7);
+  // sprintf(buf_col, "%00006X", col_day.hex);
+  // strcat(buf, buf_col);
+  // strcat(buf, "</color_day>\r\n");
+  strcat(buf, "<color_time>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_time.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_time>\r\n");
+  strcat(buf, "<color_temp_in>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_tempin.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_in>\r\n");
+  strcat(buf, "<color_temp_out>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_tempout.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_out>\r\n");
+  strcat(buf, "<color_route>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", 0xFFFFFF);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_route>\r\n");
+  strcat(buf, "<color_speed>FF0000");
+  strcat(buf, "</color_speed>\r\n");
 
-  itoa(CFG.TimeZone, buf_crc + strlen(buf_crc), DEC);
-  strcat(buf_crc, "</gmt>\r\n");
-  strcat(buf_crc, "<time>");
-  strcat(buf_crc, CFG.time);
-  strcat(buf_crc, "</time>\r\n");
-  strcat(buf_crc, "<date>");
-  strcat(buf_crc, CFG.date);
-  strcat(buf_crc, "</date>\r\n");
-  strcat(buf_crc, "<lat></lat>\r\n");
-  strcat(buf_crc, "<lon></lon>\r\n");
-  strcat(buf_crc, "<speed></speed>\r\n");
+  strcat(buf, "<route_name>");
+  strcat(buf, msg2);
+  strcat(buf, "</route_name>\r\n");
 
-  strcat(buf_crc, "<temp1>");
-  if (HCONF.dsT1 <= -100 or HCONF.dsT1 == 85)
-  {
-    strcat(buf_crc, "N/A");
-    strcat(buf_crc, "</temp1>\r\n");
-  }
-  else
-  {
-    itoa(HCONF.dsT1, buf_crc + strlen(buf_crc), DEC);
-    strcat(buf_crc, "</temp1>\r\n");
-  }
+  strcat(buf, "<text_bs>");
+  strcat(buf, msg1);
+  strcat(buf, "</text_bs>\r\n");
 
-  strcat(buf_crc, "<temp2>");
-  if (HCONF.dsT2 <= -100 or HCONF.dsT2 == 85)
-  {
-    strcat(buf_crc, "N/A");
-    strcat(buf_crc, "</temp2>\r\n");
-  }
-  else
-  {
-    itoa(HCONF.dsT2, buf_crc + strlen(buf_crc), DEC);
-    strcat(buf_crc, "</temp2>\r\n");
-  }
+  strcat(buf, "</adr>\r\n");
 
-  strcat(buf_crc, "<auxtext1>");
-  strcat(buf_crc, msg);
-  strcat(buf_crc, "</auxtext1>\r\n");
+  strcat(buf, "<adr id=\"2\">\r\n");
+  strcat(buf, "<color_text>");
 
-  crc = CRC16_mb(buf_crc, strlen(buf_crc));
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", 0xFFFF00);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_text>\r\n");
+  strcat(buf, "<color_date>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_date.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_date>\r\n");
+  strcat(buf, "<color_day>FF0000</color_day>\r\n");
+  // memset(buf_col, 0, 7);
+  // sprintf(buf_col, "%00006X", col_day.hex);
+  // strcat(buf, buf_col);
+  // strcat(buf, "</color_day>\r\n");
+  strcat(buf, "<color_time>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_time.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_time>\r\n");
+  strcat(buf, "<color_temp_in>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_tempin.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_in>\r\n");
+  strcat(buf, "<color_temp_out>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", col_tempout.hex);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_temp_out>\r\n");
+  strcat(buf, "<color_route>");
+  memset(buf_col, 0, 9);
+  sprintf(buf_col, "%00006X", 0xFFFFFF);
+  strcat(buf, buf_col);
+  strcat(buf, "</color_route>\r\n");
+  strcat(buf, "<color_speed>FF0000");
+  strcat(buf, "</color_speed>\r\n");
+  strcat(buf, "<route_name>");
+  strcat(buf, msg2);
+  strcat(buf, "</route_name>\r\n");
+  strcat(buf, "<text_bs>");
+  strcat(buf, msg1);
+  strcat(buf, "</text_bs>\r\n");
+  strcat(buf, "</adr>\r\n");
 
-  strcat(xml, "<gps_data>\r\n");
-  strcat(xml, buf_crc);
-  strcat(xml, "<gps_crc>");
-
+  // CRC
+  crc = CRC16_mb(buf, strlen(buf));
+  strcat(xml, "<intboard_data>\r\n");
+  strcat(xml, buf);
+  strcat(xml, "<intboard_crc>");
   char crc_temp[5] = {0};
-
   sprintf(crc_temp, "%04X", crc);
   strcat(xml, crc_temp);
-  strcat(xml, "</gps_crc>\r\n");
-  strcat(xml, "</gps_data>");
+  strcat(xml, "</intboard_crc>\r\n");
+  strcat(xml, "</intboard_data>");
+  strcat(xml, "\r\n");
 
-  Serial2.println(xml);
+  Serial2.print(xml);
   Serial2.println();
 }
 /*****************************************************************************************/

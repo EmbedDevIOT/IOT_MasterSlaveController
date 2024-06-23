@@ -79,6 +79,21 @@ extern DateTime Clock;
 //=======================================================================
 
 //========================== ENUMERATION ================================
+enum menu
+{
+  IDLE = 0,
+  L1_CAR_NUM,
+  L2_MIN,
+  L3_HOUR,
+  L4_DAY,
+  L5_MONTH,
+  L6_YEAR,
+  L7_BRIGHT,
+  L8_WCL,
+  L9_WCSS,
+  L10_WiFi
+};
+
 // COLOR DEFINITIONS
 enum C
 {
@@ -140,6 +155,16 @@ enum _WCSS
   SENSOR_OPEN = 0,
   SENSOR_CLOSE,
 };
+
+enum BTN_VALUE
+{
+    bt5 = 4095,
+    bt4 = 1920,
+    bt3 = 1230,
+    bt2 = 870,
+    bt1 = 670
+};
+
 
 //=======================================================================
 
@@ -250,6 +275,7 @@ struct Flag
   bool StateWC2 = 0;   // General State WC_2 
 };
 extern Flag STATE;
+
 //============================================================================
 
 //============================================================================
@@ -269,8 +295,7 @@ void getDateChar(char *array);
 void Send_GPSdata();
 void Send_ITdata(uint8_t adr);
 void Send_BSdata();
-
-void SendXMLUserData(char *msg);
+void Send_BS_UserData(char *msg1, char *msg2);
 unsigned int CRC16_mb(char *buf, int len);
 //============================================================================
 #endif // _Config_H

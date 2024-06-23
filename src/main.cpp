@@ -10,10 +10,11 @@
 
 //=========================== GLOBAL VARIABLES =========================
 uint8_t sec_cnt = 0;
-char buf[32] = {0}; // buffer for send message
-char umsg[30];      // buffer for user message
-uint16_t btn_value = 0;
-int btn_num = 0;
+
+uint8_t menu = 0;     // State menu (levels)
+char name_1[25] = ""; // menu message to show TOP zone
+char name_2[25] = ""; // menu message to show BOT zone
+uint8_t old_min = 0;
 //======================================================================
 
 //================================ OBJECTs =============================
@@ -32,7 +33,7 @@ DallasTemperature ds18b20_2(&oneWire2);
 
 HardwareSerial RS485(2);
 
-AnalogButtons analogButtons(KBD_PIN, INPUT);
+AnalogButtons analogButtons(KBD_PIN, INPUT, 5, 50);
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -79,13 +80,14 @@ void btn4Click();
 void btn5Click();
 void configure();
 
-Button b1 = Button(4095, &btn1Click);
-Button b2 = Button(1920, &btn2Click);
-Button b3 = Button(1230, &btn3Click, &btn3Hold);
-Button b4 = Button(870, &btn4Click);
+Button b1 = Button(bt1, &btn1Click);
+Button b2 = Button(bt2, &btn2Click);
+// Button b3 = Button(bt3, &btn3Click, &btn3Hold);
+Button b3 = Button(bt3, &btn3Click);
+Button b4 = Button(bt4, &btn4Click);
 // get it activated (hold function invoked) only every 500ms
 // Button b4 = Button(929, &b4Click, &b4Hold, 1000, 500);
-Button b5 = Button(670, &btn5Click);
+Button b5 = Button(bt5, &btn5Click);
 
 //=======================================================================
 
@@ -99,8 +101,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.4";
-    CFG.fwdate = "22.06.2024";
+    CFG.fw = "0.1.5";
+    CFG.fwdate = "23.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -205,7 +207,7 @@ void loop()
 {
     HandleClient();
     analogButtons.check();
-    configure();
+    // configure();
 }
 //=======================================================================
 
@@ -267,9 +269,10 @@ void HandlerCore1(void *pvParameters)
     for (;;)
     {
         Clock = RTC.getTime();
+
         GetDSData();
         DebugInfo();
-
+        Serial.printf("Menu Level: %d \r\n", menu);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -286,6 +289,18 @@ void HandlerTask500(void *pvParameters)
         STATE.SensWC2 = GetWCState(WC2);
         SetColorWC();
         SendtoRS485();
+        // if (STATE.DUPDBlock && menu == L2_MIN)
+        // {
+        //     if (Clock.second == 0)
+        //     {
+        //         Serial.print("Minute Update \r\n");
+        //         memset(name_1, 0, 25);
+        //         memset(name_2, 0, 25);
+        //         strcat(name_1, "Минута:");
+        //         sprintf(name_2, "%02d", Clock.minute);
+        //         Send_BS_UserData(name_1, name_2);
+        //     }
+        // }
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
@@ -431,6 +446,7 @@ void SendtoRS485()
             STATE.StaticUPD = false;
             STATE.cnt_Supd = 0;
         }
+
         if (STATE.StaticUPD && STATE.cnt_Supd < 2)
         {
             Send_ITdata(1);
@@ -445,33 +461,310 @@ void SendtoRS485()
             vTaskDelay(100 / portTICK_PERIOD_MS);
             Send_GPSdata();
         }
+
         sec_cnt = 0;
     }
 }
 //=========================================================================
+
+//=================== Keyboard buttons Handler =============================
+// Button 1 Handling (+)
 void btn1Click()
 {
-    Serial.print("button 1 clicked");
+    Serial.print("button 1 clicked\r\n");
+    if (menu == IDLE)
+    {
+        int hour = Clock.hour;
+        hour++;
+        if (hour > 23)
+            hour = 0;
+        Clock.hour = hour;
+        RTC.setTime(Clock);
+        Serial.printf("Hour: %d \n\r", Clock.hour);
+        Send_GPSdata();
+    }
 }
+
+// Button 2 Handling (-)
 void btn2Click()
 {
-    Serial.print("button 2 clicked");
+    Serial.print("button 2 clicked\r\n");
+
+    switch (menu)
+    {
+    case IDLE:
+        // CarNUM (--) to IDLE state (no change TOP zone)
+        if (!UserText.hide_t)
+        {
+            UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
+            Serial.printf("CARNUM: %d \r\n", UserText.carnum);
+            SaveConfig();
+            Send_BSdata();
+        }
+        break;
+    // CarNUM (--) to General MENU  (change TOP zone)
+    case L1_CAR_NUM:
+        UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
+        Serial.printf("CARNUM: %d \r\n", UserText.carnum);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", UserText.carnum);
+        Send_BS_UserData(name_1, name_2);
+        SaveConfig();
+        break;
+    // Min --
+    case L2_MIN:
+        break;
+    // Hour --
+    case L3_HOUR:
+        break;
+    // Day --
+    case L4_DAY:
+        break;
+    // MONTH --
+    case L5_MONTH:
+        break;
+    // Year --
+    case L6_YEAR:
+        break;
+    // Brightness --
+    case L7_BRIGHT:
+        break;
+    // WC Signal State Logiq
+    case L8_WCL:
+        break;
+    // WC Signal sensor state Preset
+    case L9_WCSS:
+        break;
+    // WiFI ON / OFF
+    case L10_WiFi:
+        break;
+    default:
+        break;
+    }
 }
+
+// Button 3 Handling (Check and Select level menu)
 void btn3Click()
 {
-    Serial.print("button 4 clicked");
+    Serial.print("button 3 clicked\r\n");
+    menu += 1;
+
+    if (menu <= 10)
+    {
+        STATE.DUPDBlock = true;
+    }
+    else
+    {
+        menu = IDLE;
+        STATE.DUPDBlock = false;
+    }
+
+    switch (menu)
+    {
+    // CarNUM (--) to General MENU  (change TOP zone)
+    case L1_CAR_NUM:
+        Serial.printf("CARNUM:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Вагон:");
+        sprintf(name_2, "%d", UserText.carnum);
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // Min --
+    case L2_MIN:
+        Serial.printf("Minute:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Минута:");
+        sprintf(name_2, "%02d", Clock.minute);
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // Hour --
+    case L3_HOUR:
+        Serial.printf("Hour:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Час:");
+        sprintf(name_2, "%02d", Clock.hour);
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // Day --
+    case L4_DAY:
+        Serial.printf("Day:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "День:");
+        sprintf(name_2, "%02d", Clock.date);
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // MONTH --
+    case L5_MONTH:
+        Serial.printf("Month:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Месяц:");
+        sprintf(name_2, "%02d", Clock.month);
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // Year --
+    case L6_YEAR:
+        Serial.printf("Year:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Год:");
+        sprintf(name_2, "%02d", Clock.year);
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // Brightness --
+    case L7_BRIGHT:
+        Serial.printf("Brightness:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Яркость:");
+        sprintf(name_2, "%02d", HCONF.bright);
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // WC Signal State Logiq
+    case L8_WCL:
+        Serial.printf("WC Signal Logiq:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "ЛогикаWC");
+        if (HCONF.WCL == NORMAL)
+        {
+            sprintf(name_2, "Нормальн");
+        }
+        else if (HCONF.WCL == REVERSE)
+        {
+            sprintf(name_2, "Реверс");
+        }
+        else if (HCONF.WCL == ONE_HALL)
+        {
+            sprintf(name_2, "Один Тамбур");
+        }
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // WC Signal sensor state Preset
+    case L9_WCSS:
+        Serial.printf("WC Signal sensor preset:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "СигналWC");
+        if (HCONF.WCSS == SENSOR_OPEN)
+        {
+            sprintf(name_2, "Разомкнут");
+        }
+        else
+        {
+            sprintf(name_2, "Замкнут");
+        }
+
+        Send_BS_UserData(name_1, name_2);
+        break;
+    // WiFI ON / OFF
+    case L10_WiFi:
+        Serial.printf("WiFI Conrol:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "WiFi:");
+        sprintf(name_2, "ВКЛ");
+        Send_BS_UserData(name_1, name_2);
+        break;
+    default:
+        break;
+    }
 }
+
+// Button 3 Hold Handling (Enter the menu)
 void btn3Hold()
 {
-    Serial.print("button 3 held");
+    Serial.print("button 3 hold");
+
+    if (menu == IDLE)
+    {
+        menu = L1_CAR_NUM;
+        STATE.DUPDBlock = true;
+        strcat(name_1, "Вагон");
+        sprintf(name_2, "%d", UserText.carnum);
+        Send_BS_UserData(name_1, name_2);
+    }
 }
+
+// Button 4 Handling (+)
 void btn4Click()
 {
-    Serial.print("button 4 clicked");
+    Serial.print("button 4 clicked\r\n");
+
+    switch (menu)
+    {
+    case IDLE:
+        // CarNUM (++) to IDLE state (no change TOP zone)
+        if (!UserText.hide_t)
+        {
+            UserText.carnum < 99 ? UserText.carnum++ : UserText.carnum = 0;
+            Serial.printf("CARNUM: %d \r\n", UserText.carnum);
+            SaveConfig();
+            Send_BSdata();
+        }
+        break;
+    // CarNUM (++) to General MENU  (change TOP zone)
+    case L1_CAR_NUM:
+        UserText.carnum < 99 ? UserText.carnum++ : UserText.carnum = 0;
+        Serial.printf("CARNUM: %d \r\n", UserText.carnum);
+        memset(name_2, 0, 25);
+        sprintf(name_2, "%d", UserText.carnum);
+        Send_BS_UserData(name_1, name_2);
+        SaveConfig();
+        break;
+    // Min ++
+    case L2_MIN:
+        break;
+    // Hour ++
+    case L3_HOUR:
+        break;
+    // Day ++
+    case L4_DAY:
+        break;
+    // MONTH ++
+    case L5_MONTH:
+        break;
+    // Year ++
+    case L6_YEAR:
+        break;
+    // Brightness ++
+    case L7_BRIGHT:
+        break;
+    // WC Signal State Logiq
+    case L8_WCL:
+        break;
+    // WC Signal sensor state Preset
+    case L9_WCSS:
+        break;
+    // WiFI ON / OFF
+    case L10_WiFi:
+        /* code */
+        break;
+    default:
+        break;
+    }
 }
+
+// Button 5 Handling (-)
 void btn5Click()
 {
-    Serial.print("button 5 clicked");
+    Serial.print("button 5 clicked\r\n");
+    // Hour --
+    if (menu == IDLE)
+    {
+        int hour = Clock.hour;
+        hour--;
+        if (hour < 0)
+            hour = 23;
+        Clock.hour = hour;
+        RTC.setTime(Clock);
+        Serial.printf("Hour: %d \n\r", Clock.hour);
+        Send_GPSdata();
+    }
 }
 
 void configure()
@@ -483,61 +776,6 @@ void configure()
 //=========================================================================
 void ButtonHandler()
 {
-    uint8_t debug;
-
-    static int btn_cnt;
-
-    int btn_num_new = KButtonRead();
-
-    if (btn_num_new > 0)
-    {
-        Serial.println("Debug 1");
-        // btn_cnt = 0;
-
-        if (btn_num != btn_num_new)
-        {
-            btn_num = btn_num_new;
-
-            btn_cnt = 0;
-            Serial.println("Debug 2");
-            switch (btn_num)
-            {
-            case BT1:
-                Serial.println("Button 1 Pressed");
-                break;
-            case BT2:
-                Serial.println("Button 2 Pressed");
-                break;
-            case BT3:
-                Serial.println("Button 3 Pressed");
-                break;
-            case BT4:
-                Serial.println("Button 4 Pressed");
-                break;
-            case BT5:
-                Serial.println("Button 5 Pressed");
-                break;
-            default:
-                break;
-            }
-        }
-        else if (btn_num == btn_num_new)
-        {
-            // Serial.println("Debug 3");
-            while (KButtonRead() > 0)
-            {
-                btn_cnt++;
-                Serial.printf("Button %d Hold: %d \r\n", btn_num, btn_cnt);
-                vTaskDelay(1000 / portTICK_PERIOD_MS);
-                if (btn_cnt == 20)
-                {
-                    btn_cnt = 0;
-                    Serial.printf("Reset \r\n");
-                }
-            }
-            btn_cnt = 0;
-        }
-    }
 
     // Serial.println("#### FACTORY RESET ####");
     // SystemFactoryReset();
