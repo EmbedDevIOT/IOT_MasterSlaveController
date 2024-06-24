@@ -82,16 +82,17 @@ extern DateTime Clock;
 enum menu
 {
   IDLE = 0,
-  L1_CAR_NUM,
-  L2_MIN,
-  L3_HOUR,
-  L4_DAY,
-  L5_MONTH,
-  L6_YEAR,
-  L7_BRIGHT,
-  L8_WCL,
-  L9_WCSS,
-  L10_WiFi
+  _CAR_NUM,
+  _GMT,
+  _MIN,
+  _HOUR,
+  _DAY,
+  _MONTH,
+  _YEAR,
+  _BRIGHT,
+  _WCL,
+  _WCSS,
+  _WiFi
 };
 
 // COLOR DEFINITIONS
@@ -183,7 +184,7 @@ struct GlobalConfig
   String Ssid = "MkT";           // SSID Wifi network
   String Password = "QFCxfXMA3"; // Passwords WiFi network
 
-  int TimeZone = 0;
+  int gmt = 0;
 
   char time[7] = "";
   char date[9] = "";

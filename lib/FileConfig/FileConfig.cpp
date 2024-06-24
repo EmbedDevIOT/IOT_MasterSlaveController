@@ -78,6 +78,8 @@ void LoadConfig()
   HCONF.T1_offset = doc["t1_offset"];
   HCONF.T2_offset = doc["t2_offset"];
 
+  CFG.gmt = doc["gmt"];
+
   // doc["time"].as<String>().toCharArray(TempBuf, 10);
   // S.H = atoi(strtok(TempBuf, ":"));
   // S.M = atoi(strtok(NULL, ":"));
@@ -105,6 +107,7 @@ void ShowLoadJSONConfig()
   Serial.println("------------------ USER DATA END----------------------");
   Serial.println();
   Serial.println("---------------------- SYSTEM ------------------------");
+  Serial.printf("####  GMT: %d \r\n", CFG.gmt);
   sprintf(msg, "####  DATA: %0002d-%02d-%02d", Clock.year, Clock.month, Clock.date);
   Serial.println(F(msg));
   sprintf(msg, "####  TIME: %02d:%02d:%02d", Clock.hour, Clock.minute, Clock.second);
@@ -163,7 +166,7 @@ void SaveConfig()
   doc["ssid"] = CFG.APSSID;
   doc["t1_offset"] = HCONF.T1_offset;
   doc["t2_offset"] = HCONF.T2_offset;
-
+  doc["gmt"] = CFG.gmt;
 
   File configFile = SPIFFS.open("/config.json", "w");
   serializeJson(doc, configFile); // Writing json string to file

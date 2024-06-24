@@ -101,8 +101,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.5";
-    CFG.fwdate = "23.06.2024";
+    CFG.fw = "0.1.6";
+    CFG.fwdate = "24.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -489,7 +489,7 @@ void btn1Click()
 void btn2Click()
 {
     Serial.print("button 2 clicked\r\n");
-
+    int min, hour, month;
     switch (menu)
     {
     case IDLE:
@@ -503,7 +503,7 @@ void btn2Click()
         }
         break;
     // CarNUM (--) to General MENU  (change TOP zone)
-    case L1_CAR_NUM:
+    case _CAR_NUM:
         UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
         Serial.printf("CARNUM: %d \r\n", UserText.carnum);
         memset(name_2, 0, 15);
@@ -511,32 +511,74 @@ void btn2Click()
         Send_BS_UserData(name_1, name_2);
         SaveConfig();
         break;
-    // Min --
-    case L2_MIN:
+    // GMT --
+    case _GMT:
+        break;
+    // MIN --
+    case _MIN:
+        min = Clock.minute;
+        min--;
+        if (min < 0)
+            min = 59;
+        Clock.minute = min;
+        Serial.printf("MIN: %d \r\n", min);
+        RTC.setTime(Clock);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", min);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // Hour --
-    case L3_HOUR:
+    case _HOUR:
+        hour = Clock.hour;
+        hour--;
+        if (hour < 0)
+            hour = 23;
+        Clock.hour = hour;
+        RTC.setTime(Clock);
+        Serial.printf("Hour: %d \n\r", Clock.hour);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", hour);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // Day --
-    case L4_DAY:
+    case _DAY:
         break;
     // MONTH --
-    case L5_MONTH:
+    case _MONTH:
+        month = Clock.month;
+        month--;
+        if (month < 1)
+        {
+            month = 12;
+        }
+        Clock.month = month;
+        RTC.setTime(Clock);
+        Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", month);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // Year --
-    case L6_YEAR:
+    case _YEAR:
         break;
     // Brightness --
-    case L7_BRIGHT:
+    case _BRIGHT:
         break;
     // WC Signal State Logiq
-    case L8_WCL:
+    case _WCL:
         break;
     // WC Signal sensor state Preset
-    case L9_WCSS:
+    case _WCSS:
         break;
     // WiFI ON / OFF
-    case L10_WiFi:
+    case _WiFi:
+        /* code */
         break;
     default:
         break;
@@ -549,7 +591,7 @@ void btn3Click()
     Serial.print("button 3 clicked\r\n");
     menu += 1;
 
-    if (menu <= 10)
+    if (menu <= 11)
     {
         STATE.DUPDBlock = true;
     }
@@ -562,7 +604,7 @@ void btn3Click()
     switch (menu)
     {
     // CarNUM (--) to General MENU  (change TOP zone)
-    case L1_CAR_NUM:
+    case _CAR_NUM:
         Serial.printf("CARNUM:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -570,8 +612,27 @@ void btn3Click()
         sprintf(name_2, "%d", UserText.carnum);
         Send_BS_UserData(name_1, name_2);
         break;
-    // Min --
-    case L2_MIN:
+        // Min --
+    case _GMT:
+        Serial.printf("GMT:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Час.пояс:");
+        if (CFG.gmt < 0)
+        {
+            sprintf(name_2, "-%2d", CFG.gmt);
+        }
+        else if (CFG.gmt == 0)
+        {
+            sprintf(name_2, "%d", CFG.gmt);
+        }
+        else
+        {
+            sprintf(name_2, "+%d", CFG.gmt);
+        }
+        Send_BS_UserData(name_1, name_2);
+        break;
+    case _MIN:
         Serial.printf("Minute:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -580,7 +641,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // Hour --
-    case L3_HOUR:
+    case _HOUR:
         Serial.printf("Hour:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -589,7 +650,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // Day --
-    case L4_DAY:
+    case _DAY:
         Serial.printf("Day:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -598,7 +659,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // MONTH --
-    case L5_MONTH:
+    case _MONTH:
         Serial.printf("Month:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -607,7 +668,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // Year --
-    case L6_YEAR:
+    case _YEAR:
         Serial.printf("Year:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -616,7 +677,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // Brightness --
-    case L7_BRIGHT:
+    case _BRIGHT:
         Serial.printf("Brightness:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -625,7 +686,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // WC Signal State Logiq
-    case L8_WCL:
+    case _WCL:
         Serial.printf("WC Signal Logiq:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -645,7 +706,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // WC Signal sensor state Preset
-    case L9_WCSS:
+    case _WCSS:
         Serial.printf("WC Signal sensor preset:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -662,7 +723,7 @@ void btn3Click()
         Send_BS_UserData(name_1, name_2);
         break;
     // WiFI ON / OFF
-    case L10_WiFi:
+    case _WiFi:
         Serial.printf("WiFI Conrol:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -682,7 +743,7 @@ void btn3Hold()
 
     if (menu == IDLE)
     {
-        menu = L1_CAR_NUM;
+        menu = _CAR_NUM;
         STATE.DUPDBlock = true;
         strcat(name_1, "Вагон");
         sprintf(name_2, "%d", UserText.carnum);
@@ -694,7 +755,7 @@ void btn3Hold()
 void btn4Click()
 {
     Serial.print("button 4 clicked\r\n");
-
+    int min, hour, month;
     switch (menu)
     {
     case IDLE:
@@ -708,7 +769,7 @@ void btn4Click()
         }
         break;
     // CarNUM (++) to General MENU  (change TOP zone)
-    case L1_CAR_NUM:
+    case _CAR_NUM:
         UserText.carnum < 99 ? UserText.carnum++ : UserText.carnum = 0;
         Serial.printf("CARNUM: %d \r\n", UserText.carnum);
         memset(name_2, 0, 25);
@@ -716,32 +777,73 @@ void btn4Click()
         Send_BS_UserData(name_1, name_2);
         SaveConfig();
         break;
-    // Min ++
-    case L2_MIN:
+    // GMT ++
+    case _GMT:
+        break;
+    // MIN ++
+    case _MIN:
+        min = Clock.minute;
+        min++;
+        if (min > 59)
+            min = 0;
+        Clock.minute = min;
+        Serial.printf("MIN: %d \r\n", min);
+        RTC.setTime(Clock);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", min);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // Hour ++
-    case L3_HOUR:
+    case _HOUR:
+        hour = Clock.hour;
+        hour++;
+        if (hour > 23)
+            hour = 0;
+        Clock.hour = hour;
+        RTC.setTime(Clock);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", hour);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Serial.printf("Hour: %d \n\r", Clock.hour);
+        Send_GPSdata();
         break;
     // Day ++
-    case L4_DAY:
+    case _DAY:
         break;
     // MONTH ++
-    case L5_MONTH:
+    case _MONTH:
+        month = Clock.month;
+        month++;
+        if (month > 12)
+        {
+            month = 1;
+        }
+        Clock.month = month;
+        RTC.setTime(Clock);
+        Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", month);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // Year ++
-    case L6_YEAR:
+    case _YEAR:
         break;
     // Brightness ++
-    case L7_BRIGHT:
+    case _BRIGHT:
         break;
     // WC Signal State Logiq
-    case L8_WCL:
+    case _WCL:
         break;
     // WC Signal sensor state Preset
-    case L9_WCSS:
+    case _WCSS:
         break;
     // WiFI ON / OFF
-    case L10_WiFi:
+    case _WiFi:
         /* code */
         break;
     default:

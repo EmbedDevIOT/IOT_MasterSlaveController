@@ -261,7 +261,7 @@ void ShowFlashSave()
 /***************************************************** ****************************/
 void SystemFactoryReset()
 {
-  CFG.TimeZone = 3;
+  CFG.gmt = 3;
   CFG.WiFiMode = AccessPoint;
   CFG.APSSID = "0845";
   CFG.APPAS = "retra0845zxc";
@@ -359,18 +359,18 @@ void Send_GPSdata()
   memset(buf_crc, 0, strlen(buf_crc));
   memset(xml, 0, strlen(xml));
 
-  if (CFG.TimeZone == 0)
+  if (CFG.gmt == 0)
   {
     strcat(buf_crc, "<gmt>");
   }
-  else if (CFG.TimeZone < 0)
+  else if (CFG.gmt < 0)
   {
     strcat(buf_crc, "<gmt>-");
   }
   else
     strcat(buf_crc, "<gmt>+");
 
-  itoa(CFG.TimeZone, buf_crc + strlen(buf_crc), DEC);
+  itoa(CFG.gmt, buf_crc + strlen(buf_crc), DEC);
   strcat(buf_crc, "</gmt>\r\n");
   strcat(buf_crc, "<time>");
   strcat(buf_crc, CFG.time);

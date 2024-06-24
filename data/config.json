@@ -1,6 +1,6 @@
 {
    "sn": 0,
-   "firmware":"0.6",
+   "firmware":"1.0",
 
    "ssid": "0845",
    "pass": "retra0845zxc",
@@ -23,6 +23,7 @@
    
    "t1_offset": 0,
    "t2_offset": 0,
+   "gmt": 3,
    "br": 90,
    "vol": 50,
    "wcsl": 0,
