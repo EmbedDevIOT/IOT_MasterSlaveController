@@ -101,7 +101,7 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.7";
+    CFG.fw = "0.1.8";
     CFG.fwdate = "25.06.2024";
 
     Serial.begin(UARTSpeed);
@@ -583,17 +583,25 @@ void btn2Click()
     // Year --
     case _YEAR:
         year = Clock.year;
-        year--;
+        if (year > 2000 && year <= 2099)
+            year--;
         Clock.year = year;
         RTC.setTime(Clock);
         Serial.printf("Year: %d\r\n ", Clock.year);
         memset(name_2, 0, 15);
         sprintf(name_2, "%d", Clock.year);
+        Send_BS_UserData(name_1, name_2);
         vTaskDelay(100 / portTICK_PERIOD_MS);
         Send_GPSdata();
         break;
     // Brightness --
     case _BRIGHT:
+        if (HCONF.bright > 10 && HCONF.bright <= 100)
+            HCONF.bright -= 10;
+        Serial.printf("Bright: %d\r\n ", HCONF.bright);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", HCONF.bright);
+        Send_BS_UserData(name_1, name_2);
         break;
     // WC Signal State Logiq
     case _WCL:
@@ -726,6 +734,25 @@ void btn3Click()
         break;
     // WC Signal State Logiq
     case _WCL:
+        Serial.printf("Saving Brightness:\r\n");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        // strcat(name_1, "Подождите");
+        strcat(name_1, "Ожидайте");
+        strcat(name_2, "...");
+        Send_BS_UserData(name_1, name_2);
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        STATE.StaticUPD = true;
+        vTaskDelay(4000 / portTICK_PERIOD_MS);
+
+
+        // vTaskDelay(100 / portTICK_PERIOD_MS);
+        // Send_ITdata(1);
+        // vTaskDelay(100 / portTICK_PERIOD_MS);
+        // Send_ITdata(2);
+
+
         Serial.printf("WC Signal Logiq:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -906,17 +933,29 @@ void btn4Click()
     // Year ++
     case _YEAR:
         year = Clock.year;
-        year++;
+        if (year >= 2000 && year < 2099)
+        {
+            year++;
+        }
         Clock.year = year;
         RTC.setTime(Clock);
         Serial.printf("Year: %d\r\n", Clock.year);
         memset(name_2, 0, 15);
         sprintf(name_2, "%d", Clock.year);
+        Send_BS_UserData(name_1, name_2);
         vTaskDelay(100 / portTICK_PERIOD_MS);
         Send_GPSdata();
         break;
     // Brightness ++
     case _BRIGHT:
+        if (HCONF.bright >= 10 && HCONF.bright < 100)
+        {
+            HCONF.bright += 10;
+        }
+        Serial.printf("Bright: %d\r\n ", HCONF.bright);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", HCONF.bright);
+        Send_BS_UserData(name_1, name_2);
         break;
     // WC Signal State Logiq
     case _WCL:
@@ -947,7 +986,6 @@ void btn4Click()
             Send_BS_UserData(name_1, name_2);
             WIFIinit(AccessPoint);
         }
-
         break;
     default:
         break;
