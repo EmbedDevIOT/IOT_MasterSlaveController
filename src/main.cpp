@@ -33,7 +33,7 @@ DallasTemperature ds18b20_2(&oneWire2);
 
 HardwareSerial RS485(2);
 
-AnalogButtons analogButtons(KBD_PIN, INPUT, 5, 50);
+AnalogButtons analogButtons(KBD_PIN, INPUT, 3, 100);
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -101,8 +101,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.6";
-    CFG.fwdate = "24.06.2024";
+    CFG.fw = "0.1.7";
+    CFG.fwdate = "25.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -489,7 +489,7 @@ void btn1Click()
 void btn2Click()
 {
     Serial.print("button 2 clicked\r\n");
-    int min, hour, month;
+    int min, hour, data, month;
     switch (menu)
     {
     case IDLE:
@@ -513,6 +513,21 @@ void btn2Click()
         break;
     // GMT --
     case _GMT:
+        if (CFG.gmt > -12 && CFG.gmt <= 12)
+        {
+            CFG.gmt--;
+            memset(name_2, 0, 15);
+            if (CFG.gmt > 0)
+            {
+                sprintf(name_2, "+%d", CFG.gmt);
+            }
+            else
+                sprintf(name_2, "%d", CFG.gmt);
+            Send_BS_UserData(name_1, name_2);
+        }
+        SaveConfig();
+        Serial.printf("GMT: %d \r\n", CFG.gmt);
+
         break;
     // MIN --
     case _MIN:
@@ -546,6 +561,22 @@ void btn2Click()
         break;
     // Day --
     case _DAY:
+        data = Clock.date;
+        month = Clock.month;
+        data--;
+        data = constrain(data, 0, DS_dim(month - 1));
+
+        if (data < 1)
+            data = DS_dim(month - 1);
+
+        Clock.date = data;
+        RTC.setTime(Clock);
+        Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", Clock.date);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // MONTH --
     case _MONTH:
@@ -578,7 +609,25 @@ void btn2Click()
         break;
     // WiFI ON / OFF
     case _WiFi:
-        /* code */
+        if (STATE.WiFiEnable)
+        {
+            STATE.WiFiEnable = false;
+            Serial.println("WiFi_Disable");
+            memset(name_2, 0, 15);
+            sprintf(name_2, "ОТКЛ");
+            Send_BS_UserData(name_1, name_2);
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
+        }
+        else
+        {
+            STATE.WiFiEnable = true;
+            Serial.println("WiFi_Disable");
+            memset(name_2, 0, 15);
+            sprintf(name_2, "ВКЛ");
+            Send_BS_UserData(name_1, name_2);
+            WIFIinit(AccessPoint);
+        }
         break;
     default:
         break;
@@ -618,17 +667,13 @@ void btn3Click()
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
         strcat(name_1, "Час.пояс:");
-        if (CFG.gmt < 0)
+        if (CFG.gmt > 0)
         {
-            sprintf(name_2, "-%2d", CFG.gmt);
-        }
-        else if (CFG.gmt == 0)
-        {
-            sprintf(name_2, "%d", CFG.gmt);
+            sprintf(name_2, "+%2d", CFG.gmt);
         }
         else
         {
-            sprintf(name_2, "+%d", CFG.gmt);
+            sprintf(name_2, "%d", CFG.gmt);
         }
         Send_BS_UserData(name_1, name_2);
         break;
@@ -655,7 +700,7 @@ void btn3Click()
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
         strcat(name_1, "День:");
-        sprintf(name_2, "%02d", Clock.date);
+        sprintf(name_2, "%d", Clock.date);
         Send_BS_UserData(name_1, name_2);
         break;
     // MONTH --
@@ -664,7 +709,7 @@ void btn3Click()
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
         strcat(name_1, "Месяц:");
-        sprintf(name_2, "%02d", Clock.month);
+        sprintf(name_2, "%d", Clock.month);
         Send_BS_UserData(name_1, name_2);
         break;
     // Year --
@@ -673,7 +718,7 @@ void btn3Click()
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
         strcat(name_1, "Год:");
-        sprintf(name_2, "%02d", Clock.year);
+        sprintf(name_2, "%d", Clock.year);
         Send_BS_UserData(name_1, name_2);
         break;
     // Brightness --
@@ -719,7 +764,6 @@ void btn3Click()
         {
             sprintf(name_2, "Замкнут");
         }
-
         Send_BS_UserData(name_1, name_2);
         break;
     // WiFI ON / OFF
@@ -728,7 +772,12 @@ void btn3Click()
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
         strcat(name_1, "WiFi:");
-        sprintf(name_2, "ВКЛ");
+        if (STATE.WiFiEnable)
+        {
+            sprintf(name_2, "ВКЛ");
+        }
+        else
+            sprintf(name_2, "ОТКЛ");
         Send_BS_UserData(name_1, name_2);
         break;
     default:
@@ -755,7 +804,7 @@ void btn3Hold()
 void btn4Click()
 {
     Serial.print("button 4 clicked\r\n");
-    int min, hour, month;
+    int min, hour, data, month;
     switch (menu)
     {
     case IDLE:
@@ -779,6 +828,20 @@ void btn4Click()
         break;
     // GMT ++
     case _GMT:
+        if (CFG.gmt >= -12 && CFG.gmt < 12)
+        {
+            CFG.gmt++;
+            memset(name_2, 0, 15);
+            if (CFG.gmt > 0)
+            {
+                sprintf(name_2, "+%d", CFG.gmt);
+            }
+            else
+                sprintf(name_2, "%d", CFG.gmt);
+            Send_BS_UserData(name_1, name_2);
+        }
+        Serial.printf("GMT: %d \r\n", CFG.gmt);
+        SaveConfig();
         break;
     // MIN ++
     case _MIN:
@@ -812,6 +875,22 @@ void btn4Click()
         break;
     // Day ++
     case _DAY:
+        data = Clock.date;
+        month = Clock.month;
+
+        data++;
+
+        if (data > constrain(data, 0, DS_dim(month - 1)))
+            data = 1;
+
+        Clock.date = data;
+        RTC.setTime(Clock);
+        Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", Clock.date);
+        Send_BS_UserData(name_1, name_2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // MONTH ++
     case _MONTH:
@@ -842,9 +921,30 @@ void btn4Click()
     // WC Signal sensor state Preset
     case _WCSS:
         break;
+
     // WiFI ON / OFF
     case _WiFi:
-        /* code */
+
+        if (STATE.WiFiEnable)
+        {
+            STATE.WiFiEnable = false;
+            Serial.println("WiFi_Disable");
+            memset(name_2, 0, 15);
+            sprintf(name_2, "ОТКЛ");
+            Send_BS_UserData(name_1, name_2);
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
+        }
+        else
+        {
+            STATE.WiFiEnable = true;
+            Serial.println("WiFi_Disable");
+            memset(name_2, 0, 15);
+            sprintf(name_2, "ВКЛ");
+            Send_BS_UserData(name_1, name_2);
+            WIFIinit(AccessPoint);
+        }
+
         break;
     default:
         break;
