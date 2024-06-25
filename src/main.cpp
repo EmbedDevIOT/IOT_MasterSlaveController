@@ -142,8 +142,6 @@ void setup()
     analogButtons.add(b4);
     analogButtons.add(b5);
 
-    // pinMode(KBD_PIN, INPUT);
-
     ColorSet(&col_speed, WHITE);
 
     LoadConfig();         // Load configuration from config.json files
@@ -152,13 +150,12 @@ void setup()
     WIFIinit();
     delay(500);
 
-    Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-    Amplifier.setVolume(HCONF.volume);
-
-    Serial.println(F("DAC PCM Amplifier...Done"));
-
     HTTPinit(); // HTTP server initialisation
     delay(1000);
+
+    Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+    Amplifier.setVolume(HCONF.volume);
+    Serial.println(F("DAC PCM Amplifier...Done"));
 
     xTaskCreatePinnedToCore(
         HandlerCore0,
@@ -289,18 +286,6 @@ void HandlerTask500(void *pvParameters)
         STATE.SensWC2 = GetWCState(WC2);
         SetColorWC();
         SendtoRS485();
-        // if (STATE.DUPDBlock && menu == L2_MIN)
-        // {
-        //     if (Clock.second == 0)
-        //     {
-        //         Serial.print("Minute Update \r\n");
-        //         memset(name_1, 0, 25);
-        //         memset(name_2, 0, 25);
-        //         strcat(name_1, "Минута:");
-        //         sprintf(name_2, "%02d", Clock.minute);
-        //         Send_BS_UserData(name_1, name_2);
-        //     }
-        // }
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
@@ -489,7 +474,7 @@ void btn1Click()
 void btn2Click()
 {
     Serial.print("button 2 clicked\r\n");
-    int min, hour, data, month;
+    int min, hour, data, month, year;
     switch (menu)
     {
     case IDLE:
@@ -597,6 +582,15 @@ void btn2Click()
         break;
     // Year --
     case _YEAR:
+        year = Clock.year;
+        year--;
+        Clock.year = year;
+        RTC.setTime(Clock);
+        Serial.printf("Year: %d\r\n ", Clock.year);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", Clock.year);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // Brightness --
     case _BRIGHT:
@@ -804,7 +798,7 @@ void btn3Hold()
 void btn4Click()
 {
     Serial.print("button 4 clicked\r\n");
-    int min, hour, data, month;
+    int min, hour, data, month, year;
     switch (menu)
     {
     case IDLE:
@@ -911,6 +905,15 @@ void btn4Click()
         break;
     // Year ++
     case _YEAR:
+        year = Clock.year;
+        year++;
+        Clock.year = year;
+        RTC.setTime(Clock);
+        Serial.printf("Year: %d\r\n", Clock.year);
+        memset(name_2, 0, 15);
+        sprintf(name_2, "%d", Clock.year);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        Send_GPSdata();
         break;
     // Brightness ++
     case _BRIGHT:
