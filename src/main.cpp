@@ -18,10 +18,10 @@ uint8_t old_min = 0;
 //======================================================================
 
 //================================ OBJECTs =============================
-// TaskHandle_t TaskCore_0;
-TaskHandle_t TaskCore_1;
-// TaskHandle_t TaskCore1_500ms;
-// TaskHandle_t TaskCore0_100ms;
+TaskHandle_t TaskCore0_Gen;
+TaskHandle_t TaskCore1_Gen;
+TaskHandle_t TaskCore0_TSH;
+TaskHandle_t TaskCore1_500ms;
 
 Audio Amplifier;
 MicroDS3231 RTC;
@@ -60,7 +60,7 @@ UserData UserText;
 void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void HandlerTask500(void *pvParameters);
-void HandlerTaskKeyboard(void *pvParameters);
+void HandlerTask1Wire(void *pvParameters);
 void ButtonHandler();
 void SendtoRS485();
 void GetDSData(void);
@@ -101,8 +101,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.8";
-    CFG.fwdate = "25.06.2024";
+    CFG.fw = "0.1.9";
+    CFG.fwdate = "29.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -158,45 +158,45 @@ void setup()
     Amplifier.setVolume(HCONF.volume);
     Serial.println(F("DAC PCM Amplifier...Done"));
 
-    // xTaskCreatePinnedToCore(
-    //     HandlerCore0,
-    //     "TaskCore_0",
-    //     10000,
-    //     NULL,
-    //     1,
-    //     &TaskCore_0,
-    //     0);
-    // vTaskDelay(500 / portTICK_PERIOD_MS);
+    xTaskCreatePinnedToCore(
+        HandlerCore0,
+        "TaskCore0_Gen",
+        10000,
+        NULL,
+        1,
+        &TaskCore0_Gen,
+        0);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    // xTaskCreatePinnedToCore(
-    //     HandlerTaskKeyboard,
-    //     "TaskCore0_100ms",
-    //     2048,
-    //     NULL,
-    //     1,
-    //     &TaskCore0_100ms,
-    //     0);
-    // vTaskDelay(500 / portTICK_PERIOD_MS);
+    xTaskCreatePinnedToCore(
+        HandlerTask1Wire,
+        "TaskCore0_TSH",
+        2048,
+        NULL,
+        1,
+        &TaskCore0_TSH,
+        0);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
     xTaskCreatePinnedToCore(
         HandlerCore1,
-        "TaskCore_1",
-        4096,       // ?
+        "TaskCore1_Gen",
+        2048, // ?
         NULL,
         1,
-        &TaskCore_1,
+        &TaskCore1_Gen,
         1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    // xTaskCreatePinnedToCore(
-    //     HandlerTask500,
-    //     "TaskCore1_500ms",
-    //     12000,
-    //     NULL,
-    //     1,
-    //     &TaskCore1_500ms,
-    //     1);
-    // vTaskDelay(500 / portTICK_PERIOD_MS);
+    xTaskCreatePinnedToCore(
+        HandlerTask500,
+        "TaskCore1_500ms",
+        12000,
+        NULL,
+        1,
+        &TaskCore1_500ms,
+        1);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 }
 //=======================================================================
 
@@ -208,7 +208,6 @@ void loop()
         HandleClient();
     }
     analogButtons.check();
-    // configure();
 }
 //=======================================================================
 
@@ -221,6 +220,14 @@ void HandlerCore0(void *pvParameters)
     for (;;)
     {
         Amplifier.loop();
+
+        if (STATE.menu_tmr == 20)
+        {
+            menu = IDLE;
+            STATE.menu_tmr = 0;
+            SaveConfig(); // #warning
+            STATE.DUPDBlock = false;
+        }
         // UART_Recieve_Data();
         if (STATE.TTS)
         {
@@ -250,15 +257,16 @@ void HandlerCore0(void *pvParameters)
     }
 }
 
-// Core 0. Keyboard Handler
-void HandlerTaskKeyboard(void *pvParameters)
+// Core 0. Temperature Sensor Handler
+void HandlerTask1Wire(void *pvParameters)
 {
-    Serial.print("Task: KBD T:100ms Stack:2048 Core:");
+    Serial.print("Task: TSH T:10s Stack:2048 Core:");
     Serial.println(xPortGetCoreID());
     for (;;)
     {
         // ButtonHandler();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        GetDSData();
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -271,19 +279,10 @@ void HandlerCore1(void *pvParameters)
     {
         Clock = RTC.getTime();
 
-        // GetDSData();
         DebugInfo();
 
         if (menu != IDLE)
-        {
             STATE.menu_tmr++;
-            if (STATE.menu_tmr == 20)
-            {
-                menu = IDLE;
-                SaveConfig();
-                STATE.DUPDBlock = false;
-            }
-        }
 
         Serial.printf("Menu | Level: %d | Timer: %d \r\n", menu, STATE.menu_tmr);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
