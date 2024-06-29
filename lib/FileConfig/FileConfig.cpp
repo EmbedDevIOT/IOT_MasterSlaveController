@@ -41,6 +41,8 @@ void LoadConfig()
   HCONF.WCL = doc["wcsl"];
   HCONF.WCSS = doc["wcss"];
 
+  STATE.WiFiEnable = doc["wifi_st"];
+
   ColorSet(&col_carnum, doc["c_carnum"]);
   ColorSet(&col_date, doc["c_date"]);
   ColorSet(&col_day, doc["c_day"]);
@@ -112,12 +114,9 @@ void ShowLoadJSONConfig()
   Serial.println(F(msg));
   sprintf(msg, "####  TIME: %02d:%02d:%02d", Clock.hour, Clock.minute, Clock.second);
   Serial.println(F(msg));
-  Serial.printf("####  WiFI NAME:");
-  Serial.print(CFG.APSSID);
-  Serial.println();
-  Serial.printf("####  WiFI PASS:");
-  Serial.print(CFG.APPAS);
-  Serial.println();
+  Serial.printf("####  WiFI_PWR: %d \r\n", STATE.WiFiEnable);
+  Serial.printf("####  WiFI NAME: %d \r\n",CFG.APSSID);
+  Serial.printf("####  WiFI PASS: %d \r\n", CFG.APPAS);
   sprintf(msg, "####  IP: %00d.%00d.%00d.%00d", CFG.IP1, CFG.IP2, CFG.IP3, CFG.IP4);
   Serial.println(F(msg));
   Serial.printf("####  Brigh: %d \r\n", HCONF.bright);
@@ -144,6 +143,7 @@ void SaveConfig()
   doc["vol"] = HCONF.volume;
   doc["wcsl"] = HCONF.WCL;
   doc["wcss"] = HCONF.WCSS;
+  doc["wifi_st"] = STATE.WiFiEnable;
 
   doc["c_carnum"] = GetColorNum(&col_carnum);
   doc["c_date"] = GetColorNum(&col_date);

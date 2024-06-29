@@ -18,10 +18,10 @@ uint8_t old_min = 0;
 //======================================================================
 
 //================================ OBJECTs =============================
-TaskHandle_t TaskCore_0;
+// TaskHandle_t TaskCore_0;
 TaskHandle_t TaskCore_1;
-TaskHandle_t TaskCore1_500ms;
-TaskHandle_t TaskCore0_100ms;
+// TaskHandle_t TaskCore1_500ms;
+// TaskHandle_t TaskCore0_100ms;
 
 Audio Amplifier;
 MicroDS3231 RTC;
@@ -107,7 +107,6 @@ void setup()
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
-    // Serial2.begin(RSSpeed);
     SystemInit();
     // SPIFFS INIT
     if (!SPIFFS.begin(true))
@@ -146,63 +145,68 @@ void setup()
 
     LoadConfig();         // Load configuration from config.json files
     ShowLoadJSONConfig(); // Show load configuration
+    if (STATE.WiFiEnable)
+    {
+        WIFIinit();
+        delay(500);
 
-    WIFIinit();
-    delay(500);
-
-    HTTPinit(); // HTTP server initialisation
-    delay(1000);
+        HTTPinit(); // HTTP server initialisation
+        delay(1000);
+    }
 
     Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
     Amplifier.setVolume(HCONF.volume);
     Serial.println(F("DAC PCM Amplifier...Done"));
 
-    xTaskCreatePinnedToCore(
-        HandlerCore0,
-        "TaskCore_0",
-        10000,
-        NULL,
-        1,
-        &TaskCore_0,
-        0);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    // xTaskCreatePinnedToCore(
+    //     HandlerCore0,
+    //     "TaskCore_0",
+    //     10000,
+    //     NULL,
+    //     1,
+    //     &TaskCore_0,
+    //     0);
+    // vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    xTaskCreatePinnedToCore(
-        HandlerTaskKeyboard,
-        "TaskCore0_100ms",
-        2048,
-        NULL,
-        1,
-        &TaskCore0_100ms,
-        0);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    // xTaskCreatePinnedToCore(
+    //     HandlerTaskKeyboard,
+    //     "TaskCore0_100ms",
+    //     2048,
+    //     NULL,
+    //     1,
+    //     &TaskCore0_100ms,
+    //     0);
+    // vTaskDelay(500 / portTICK_PERIOD_MS);
 
     xTaskCreatePinnedToCore(
         HandlerCore1,
         "TaskCore_1",
-        2048,
+        4096,       // ?
         NULL,
         1,
         &TaskCore_1,
         1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    xTaskCreatePinnedToCore(
-        HandlerTask500,
-        "TaskCore1_500ms",
-        12000,
-        NULL,
-        1,
-        &TaskCore1_500ms,
-        1);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    // xTaskCreatePinnedToCore(
+    //     HandlerTask500,
+    //     "TaskCore1_500ms",
+    //     12000,
+    //     NULL,
+    //     1,
+    //     &TaskCore1_500ms,
+    //     1);
+    // vTaskDelay(500 / portTICK_PERIOD_MS);
 }
 //=======================================================================
 
 //=======================        L O O P        =========================
 void loop()
 {
-    HandleClient();
+    if (STATE.WiFiEnable)
+    {
+        HandleClient();
+    }
     analogButtons.check();
     // configure();
 }
@@ -267,9 +271,21 @@ void HandlerCore1(void *pvParameters)
     {
         Clock = RTC.getTime();
 
-        GetDSData();
+        // GetDSData();
         DebugInfo();
-        Serial.printf("Menu Level: %d \r\n", menu);
+
+        if (menu != IDLE)
+        {
+            STATE.menu_tmr++;
+            if (STATE.menu_tmr == 20)
+            {
+                menu = IDLE;
+                SaveConfig();
+                STATE.DUPDBlock = false;
+            }
+        }
+
+        Serial.printf("Menu | Level: %d | Timer: %d \r\n", menu, STATE.menu_tmr);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -282,6 +298,7 @@ void HandlerTask500(void *pvParameters)
     for (;;)
     {
         sec_cnt++;
+
         STATE.SensWC1 = GetWCState(WC1);
         STATE.SensWC2 = GetWCState(WC2);
         SetColorWC();
@@ -475,6 +492,9 @@ void btn2Click()
 {
     Serial.print("button 2 clicked\r\n");
     int min, hour, data, month, year;
+
+    STATE.menu_tmr = 0; // timer menu reset
+
     switch (menu)
     {
     case IDLE:
@@ -630,6 +650,7 @@ void btn2Click()
             Send_BS_UserData(name_1, name_2);
             WIFIinit(AccessPoint);
         }
+        SaveConfig();
         break;
     default:
         break;
@@ -640,6 +661,8 @@ void btn2Click()
 void btn3Click()
 {
     Serial.print("button 3 clicked\r\n");
+    STATE.menu_tmr = 0; // timer menu reset
+
     menu += 1;
 
     if (menu <= 11)
@@ -671,7 +694,7 @@ void btn3Click()
         strcat(name_1, "Час.пояс:");
         if (CFG.gmt > 0)
         {
-            sprintf(name_2, "+%2d", CFG.gmt);
+            sprintf(name_2, "+%d", CFG.gmt);
         }
         else
         {
@@ -734,6 +757,7 @@ void btn3Click()
         break;
     // WC Signal State Logiq
     case _WCL:
+        SaveConfig();
         Serial.printf("Saving Brightness:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -746,12 +770,10 @@ void btn3Click()
         STATE.StaticUPD = true;
         vTaskDelay(4000 / portTICK_PERIOD_MS);
 
-
         // vTaskDelay(100 / portTICK_PERIOD_MS);
         // Send_ITdata(1);
         // vTaskDelay(100 / portTICK_PERIOD_MS);
         // Send_ITdata(2);
-
 
         Serial.printf("WC Signal Logiq:\r\n");
         memset(name_1, 0, 25);
@@ -826,6 +848,9 @@ void btn4Click()
 {
     Serial.print("button 4 clicked\r\n");
     int min, hour, data, month, year;
+
+    STATE.menu_tmr = 0; // timer menu reset
+
     switch (menu)
     {
     case IDLE:
@@ -986,6 +1011,7 @@ void btn4Click()
             Send_BS_UserData(name_1, name_2);
             WIFIinit(AccessPoint);
         }
+        SaveConfig();
         break;
     default:
         break;

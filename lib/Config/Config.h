@@ -274,6 +274,7 @@ struct Flag
   bool SensWC2 = 0;    // Sensor WC2 current state
   bool StateWC1 = 0;   // General State WC_1 
   bool StateWC2 = 0;   // General State WC_2 
+  uint8_t menu_tmr = 0;  
 };
 extern Flag STATE;
 
