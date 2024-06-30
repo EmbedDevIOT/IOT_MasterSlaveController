@@ -166,8 +166,6 @@ void SystemUpdate()
   STATE.cnt_Supd = 0;
   STATE.VolumeUPD = true;
 
-  // ShowLoadJSONConfig();
-
   // Show Led state (add function)
   Serial.println("System Update");
   HTTP.send(200, "text/plain", "OK");

@@ -81,6 +81,7 @@ function getConfig(information) {
             else if (information == "network") {
                 document.getElementById("wifiip").value = jsonBuf["ip1"] + '.' + jsonBuf["ip2"] + '.' + jsonBuf["ip3"] + '.' + jsonBuf["ip4"];
                 document.getElementById("ssid_name").value = jsonBuf["ssid"];
+                document.getElementById("netname").value = jsonBuf["ssid"] + "-" + jsonBuf["sn"];
             }
             else if (information == "system") {
                 document.getElementById("t1_offset").value = jsonBuf["t1_offset"];

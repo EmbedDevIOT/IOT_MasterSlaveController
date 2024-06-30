@@ -101,7 +101,7 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.2.0";
+    CFG.fw = "0.2.1";
     CFG.fwdate = "30.06.2024";
 
     Serial.begin(UARTSpeed);
@@ -691,11 +691,13 @@ void btn2Click()
         else
         {
             STATE.WiFiEnable = true;
-            Serial.println("WiFi_Disable");
+            Serial.println("WiFi_Enable");
             memset(name_2, 0, 15);
             sprintf(name_2, "ВКЛ");
             Send_BS_UserData(name_1, name_2);
             WIFIinit(AccessPoint);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            HTTPinit(); // HTTP server initialisation
         }
         SaveConfig();
         break;
@@ -1081,11 +1083,13 @@ void btn4Click()
         else
         {
             STATE.WiFiEnable = true;
-            Serial.println("WiFi_Disable");
+            Serial.println("WiFi_Enable");
             memset(name_2, 0, 15);
             sprintf(name_2, "ВКЛ");
             Send_BS_UserData(name_1, name_2);
             WIFIinit(AccessPoint);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            HTTPinit(); // HTTP server initialisation
         }
         SaveConfig();
         break;
@@ -1118,7 +1122,6 @@ void configure()
 //=========================================================================
 void ButtonHandler()
 {
-
 }
 //=========================================================================
 
