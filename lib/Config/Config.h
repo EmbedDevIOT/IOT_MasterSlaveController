@@ -237,7 +237,7 @@ extern color col_speed;
 //=======================================================================
 struct HardwareConfig
 {
-  uint8_t WCL = 0;          // WC_STATE_LOGIQ
+  int8_t WCL = 0;          // WC_STATE_LOGIQ
   uint8_t WCSS = 0;         // WC_SENSOR_SIGNAL
   uint8_t volume = 50;      // Volume  
   int8_t bright = 70;       // Led Brightness 

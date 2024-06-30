@@ -14,7 +14,7 @@ uint8_t sec_cnt = 0;
 uint8_t menu = 0;     // State menu (levels)
 char name_1[25] = ""; // menu message to show TOP zone
 char name_2[25] = ""; // menu message to show BOT zone
-uint8_t old_min = 0;
+uint8_t old_bright = 0;
 //======================================================================
 
 //================================ OBJECTs =============================
@@ -101,8 +101,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.1.9";
-    CFG.fwdate = "29.06.2024";
+    CFG.fw = "0.2.0";
+    CFG.fwdate = "30.06.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -219,16 +219,32 @@ void HandlerCore0(void *pvParameters)
     Serial.println(xPortGetCoreID());
     for (;;)
     {
+        // UART_Recieve_Data();
         Amplifier.loop();
-
+        // Exit menu (20 sec timer)
         if (STATE.menu_tmr == 20)
         {
             menu = IDLE;
             STATE.menu_tmr = 0;
-            SaveConfig(); // #warning
+            // Saving if NEW_BRIGHT != OLD
+            if (old_bright != HCONF.bright)
+            {
+                SaveConfig();
+                Serial.printf("Saving Brightness:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                // strcat(name_1, "Подождите");
+                strcat(name_1, "Ожидайте");
+                strcat(name_2, "...");
+                Send_BS_UserData(name_1, name_2);
+
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                STATE.StaticUPD = true;
+                vTaskDelay(4000 / portTICK_PERIOD_MS);
+            }
             STATE.DUPDBlock = false;
         }
-        // UART_Recieve_Data();
+
         if (STATE.TTS)
         {
             Tell_me_CurrentTime();
@@ -284,7 +300,7 @@ void HandlerCore1(void *pvParameters)
         if (menu != IDLE)
             STATE.menu_tmr++;
 
-        Serial.printf("Menu | Level: %d | Timer: %d \r\n", menu, STATE.menu_tmr);
+        // Serial.printf("Menu | Level: %d | Timer: %d \r\n", menu, STATE.menu_tmr);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -302,7 +318,7 @@ void HandlerTask500(void *pvParameters)
         STATE.SensWC2 = GetWCState(WC2);
         SetColorWC();
         SendtoRS485();
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 //=======================================================================
@@ -462,7 +478,6 @@ void SendtoRS485()
             vTaskDelay(100 / portTICK_PERIOD_MS);
             Send_GPSdata();
         }
-
         sec_cnt = 0;
     }
 }
@@ -472,7 +487,6 @@ void SendtoRS485()
 // Button 1 Handling (+)
 void btn1Click()
 {
-    Serial.print("button 1 clicked\r\n");
     if (menu == IDLE)
     {
         int hour = Clock.hour;
@@ -485,13 +499,10 @@ void btn1Click()
         Send_GPSdata();
     }
 }
-
 // Button 2 Handling (-)
 void btn2Click()
 {
-    Serial.print("button 2 clicked\r\n");
     int min, hour, data, month, year;
-
     STATE.menu_tmr = 0; // timer menu reset
 
     switch (menu)
@@ -615,8 +626,10 @@ void btn2Click()
         break;
     // Brightness --
     case _BRIGHT:
+
         if (HCONF.bright > 10 && HCONF.bright <= 100)
             HCONF.bright -= 10;
+
         Serial.printf("Bright: %d\r\n ", HCONF.bright);
         memset(name_2, 0, 15);
         sprintf(name_2, "%d", HCONF.bright);
@@ -624,9 +637,44 @@ void btn2Click()
         break;
     // WC Signal State Logiq
     case _WCL:
+        (HCONF.WCL > 0 && HCONF.WCL <= 2) ? HCONF.WCL -= 1 : HCONF.WCL = 2;
+        Serial.printf("WCL: %d\r\n ", HCONF.WCL);
+
+        memset(name_2, 0, 15);
+
+        switch (HCONF.WCL)
+        {
+        case NORMAL:
+            sprintf(name_2, "Нормальн");
+            break;
+        case REVERSE:
+            sprintf(name_2, "Реверс");
+            break;
+        case ONE_HALL:
+            sprintf(name_2, "1_Тамбур");
+            break;
+        default:
+            break;
+        }
+        SaveConfig();
+        Send_BS_UserData(name_1, name_2);
         break;
+
     // WC Signal sensor state Preset
     case _WCSS:
+        memset(name_2, 0, 25);
+        if (HCONF.WCSS == SENSOR_OPEN)
+        {
+            HCONF.WCSS = SENSOR_CLOSE;
+            sprintf(name_2, "Замкнут");
+        }
+        else
+        {
+            HCONF.WCSS = SENSOR_OPEN;
+            sprintf(name_2, "Разомкнут");
+        }
+        SaveConfig();
+        Send_BS_UserData(name_1, name_2);
         break;
     // WiFI ON / OFF
     case _WiFi:
@@ -655,13 +703,10 @@ void btn2Click()
         break;
     }
 }
-
 // Button 3 Handling (Check and Select level menu)
 void btn3Click()
 {
-    Serial.print("button 3 clicked\r\n");
     STATE.menu_tmr = 0; // timer menu reset
-
     menu += 1;
 
     if (menu <= 11)
@@ -747,6 +792,7 @@ void btn3Click()
         break;
     // Brightness --
     case _BRIGHT:
+        old_bright = HCONF.bright;
         Serial.printf("Brightness:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -756,23 +802,21 @@ void btn3Click()
         break;
     // WC Signal State Logiq
     case _WCL:
-        SaveConfig();
-        Serial.printf("Saving Brightness:\r\n");
-        memset(name_1, 0, 25);
-        memset(name_2, 0, 25);
-        // strcat(name_1, "Подождите");
-        strcat(name_1, "Ожидайте");
-        strcat(name_2, "...");
-        Send_BS_UserData(name_1, name_2);
+        // Saving if NEW_BRIGHT != OLD
+        if (old_bright != HCONF.bright)
+        {
+            SaveConfig();
+            Serial.printf("Saving Brightness:\r\n");
+            memset(name_1, 0, 25);
+            memset(name_2, 0, 25);
+            strcat(name_1, "Ожидайте");
+            strcat(name_2, "...");
+            Send_BS_UserData(name_1, name_2);
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        STATE.StaticUPD = true;
-        vTaskDelay(4000 / portTICK_PERIOD_MS);
-
-        // vTaskDelay(100 / portTICK_PERIOD_MS);
-        // Send_ITdata(1);
-        // vTaskDelay(100 / portTICK_PERIOD_MS);
-        // Send_ITdata(2);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            STATE.StaticUPD = true;
+            vTaskDelay(4000 / portTICK_PERIOD_MS);
+        }
 
         Serial.printf("WC Signal Logiq:\r\n");
         memset(name_1, 0, 25);
@@ -788,10 +832,11 @@ void btn3Click()
         }
         else if (HCONF.WCL == ONE_HALL)
         {
-            sprintf(name_2, "Один Тамбур");
+            sprintf(name_2, "1_Тамбур");
         }
         Send_BS_UserData(name_1, name_2);
         break;
+
     // WC Signal sensor state Preset
     case _WCSS:
         Serial.printf("WC Signal sensor preset:\r\n");
@@ -826,7 +871,6 @@ void btn3Click()
         break;
     }
 }
-
 // Button 3 Hold Handling (Enter the menu)
 void btn3Hold()
 {
@@ -841,11 +885,9 @@ void btn3Hold()
         Send_BS_UserData(name_1, name_2);
     }
 }
-
 // Button 4 Handling (+)
 void btn4Click()
 {
-    Serial.print("button 4 clicked\r\n");
     int min, hour, data, month, year;
 
     STATE.menu_tmr = 0; // timer menu reset
@@ -970,6 +1012,7 @@ void btn4Click()
         vTaskDelay(100 / portTICK_PERIOD_MS);
         Send_GPSdata();
         break;
+
     // Brightness ++
     case _BRIGHT:
         if (HCONF.bright >= 10 && HCONF.bright < 100)
@@ -981,11 +1024,45 @@ void btn4Click()
         sprintf(name_2, "%d", HCONF.bright);
         Send_BS_UserData(name_1, name_2);
         break;
+
     // WC Signal State Logiq
     case _WCL:
+        (HCONF.WCL >= 0 && HCONF.WCL < 2) ? HCONF.WCL += 1 : HCONF.WCL = 0;
+        Serial.printf("WCL: %d\r\n ", HCONF.WCL);
+        memset(name_2, 0, 15);
+        switch (HCONF.WCL)
+        {
+        case NORMAL:
+            sprintf(name_2, "Нормальн");
+            break;
+        case REVERSE:
+            sprintf(name_2, "Реверс");
+            break;
+        case ONE_HALL:
+            sprintf(name_2, "1_Тамбур");
+            break;
+        default:
+            break;
+        }
+        SaveConfig();
+        Send_BS_UserData(name_1, name_2);
         break;
+
     // WC Signal sensor state Preset
     case _WCSS:
+        memset(name_2, 0, 25);
+        if (HCONF.WCSS == SENSOR_OPEN)
+        {
+            HCONF.WCSS = SENSOR_CLOSE;
+            sprintf(name_2, "Замкнут");
+        }
+        else
+        {
+            HCONF.WCSS = SENSOR_OPEN;
+            sprintf(name_2, "Разомкнут");
+        }
+        SaveConfig();
+        Send_BS_UserData(name_1, name_2);
         break;
 
     // WiFI ON / OFF
@@ -1016,11 +1093,9 @@ void btn4Click()
         break;
     }
 }
-
 // Button 5 Handling (-)
 void btn5Click()
 {
-    Serial.print("button 5 clicked\r\n");
     // Hour --
     if (menu == IDLE)
     {
@@ -1034,7 +1109,6 @@ void btn5Click()
         Send_GPSdata();
     }
 }
-
 void configure()
 {
     unsigned int value = analogRead(KBD_PIN);
@@ -1045,15 +1119,6 @@ void configure()
 void ButtonHandler()
 {
 
-    // Serial.println("#### FACTORY RESET ####");
-    // SystemFactoryReset();
-    // sprintf(umsg, "Сброшено");
-    // SendXMLUserData(umsg);
-    // // SaveConfig();
-    // vTaskDelay(2000 / portTICK_PERIOD_MS);
-    // Serial.println("#### SAVE DONE ####");
-    // ESP.restart();
-    // Serial.printf("ADC %0004d \r\n", analogRead(KBD_PIN));
 }
 //=========================================================================
 
@@ -1123,7 +1188,7 @@ void Tell_me_CurrentTime()
     Clock = RTC.getTime();
     buf = "/sound/H/";
     buf += "ch";
-    buf += Clock.hour;
+    buf += Clock.hour + CFG.gmt;
     buf += ".mp3";
     Serial.printf(buf.c_str());
     Serial.println();

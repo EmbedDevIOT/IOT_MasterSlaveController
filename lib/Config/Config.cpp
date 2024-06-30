@@ -167,7 +167,7 @@ void SystemInit(void)
 void ShowInfoDevice(void)
 {
   Serial.println(F("Starting..."));
-  Serial.println(F("TableController_0846"));
+  Serial.println(F("TableController_0845"));
   Serial.print(F("SN:"));
   Serial.println(CFG.sn);
   Serial.print(F("fw_date:"));
@@ -227,12 +227,12 @@ void DebugInfo()
     Serial.println(message);
     sprintf(message, "WC1 | Sensor: %d State %d", STATE.SensWC1, STATE.StateWC1);
     Serial.println(message);
-    sprintf(message, "WC1 | Color: %d", GetColorNum(&col_wc1));
-    Serial.println(message);
     sprintf(message, "WC2 | Sensor: %d State %d", STATE.SensWC2, STATE.StateWC2);
     Serial.println(message);
-    sprintf(message, "WC2 | Color: %d", GetColorNum(&col_wc2));
-    Serial.println(message);
+    // sprintf(message, "WC1 | Color: %d", GetColorNum(&col_wc1));
+    // Serial.println(message);
+    // sprintf(message, "WC2 | Color: %d", GetColorNum(&col_wc2));
+    // Serial.println(message);
 
     // Serial.printf("SN:");
     // Serial.println(CFG.sn);

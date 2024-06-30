@@ -115,8 +115,8 @@ void ShowLoadJSONConfig()
   sprintf(msg, "####  TIME: %02d:%02d:%02d", Clock.hour, Clock.minute, Clock.second);
   Serial.println(F(msg));
   Serial.printf("####  WiFI_PWR: %d \r\n", STATE.WiFiEnable);
-  Serial.printf("####  WiFI NAME: %d \r\n",CFG.APSSID);
-  Serial.printf("####  WiFI PASS: %d \r\n", CFG.APPAS);
+  Serial.printf("####  WiFI NAME: %s \r\n",CFG.APSSID);
+  Serial.printf("####  WiFI PASS: %s \r\n", CFG.APPAS);
   sprintf(msg, "####  IP: %00d.%00d.%00d.%00d", CFG.IP1, CFG.IP2, CFG.IP3, CFG.IP4);
   Serial.println(F(msg));
   Serial.printf("####  Brigh: %d \r\n", HCONF.bright);
