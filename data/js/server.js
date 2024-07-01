@@ -2,6 +2,7 @@
 // Start "INDEX"
 function StartIndex() {
     getConfig("index");   	   // Load configuration or  config.json 	
+    getUpdate();
 }
 
 // Start "Network_Config"
@@ -12,7 +13,6 @@ function StartNetConfig() {
 // Start "System"
 function StartSystem() {
     getConfig("system");
-    getUpdate();
     getUpdateWC();
 }
 
@@ -90,6 +90,7 @@ function getConfig(information) {
                 document.getElementById("volume").value = jsonBuf["vol"];
                 document.getElementById("wc_sens_signal").value = jsonBuf["wcss"];
                 document.getElementById("wc_sens_logiq").value = jsonBuf["wcsl"];
+                document.getElementById("wc_get_state").value = jsonBuf["wcgs"];
             }
             else if (information == "shortcut") {
                 document.getElementById("sn").value = jsonBuf["sn"];
@@ -194,8 +195,6 @@ function BColUPD() {
 function BSysUPD() {
     let xml = new XMLHttpRequest();
     let buf = "?";
-    buf += "T=" + document.getElementById("time").value + "&";
-    buf += "D=" + document.getElementById("date").value + "&";
     buf += "T1O=" + document.getElementById("t1_offset").value + "&";
     buf += "T2O=" + document.getElementById("t2_offset").value + "&";
     buf += "BR=" + document.getElementById("brigh").value + "&";
@@ -208,11 +207,42 @@ function BSysUPD() {
 
 }
 
+function BTimeUPD() {
+    let xml = new XMLHttpRequest();
+    let buf = "?";
+    buf += "T=" + document.getElementById("time").value + "&";
+    buf += "D=" + document.getElementById("date").value + "&";
+    buf += "GMT=" + document.getElementById("gmt").value;
+
+    xml.open("GET", "TimeUPD" + buf, 1);
+    console.log(xml);
+    xml.send();
+    alert("Настройки сохранены.");
+}
+
+function BTimeAutoSet() {
+    let xml = new XMLHttpRequest();
+    let now = new Date();
+
+    let buf = "?";
+    buf += "T=" + now.getHours() + ":" + now.getMinutes() + "&";
+    buf += "D=" + now.getFullYear() + "-" + (now.getUTCMonth() + 1) + "-" + now.getDate() + "&";
+    
+    buf += "GMT=" + document.getElementById("gmt").value;;
+
+    xml.open("GET","TimeUPD" + buf,true);
+    xml.send();
+    // setTimeout("reload()",1000);
+    alert("Настройки сохранены.");
+}
+
+
 function BWCLogiqUPD() {
     let xml = new XMLHttpRequest();
     let buf = "?";
     buf += "WCL=" + document.getElementById("wc_sens_logiq").value + "&";
-    buf += "WCSS=" + document.getElementById("wc_sens_signal").value;
+    buf += "WCSS=" + document.getElementById("wc_sens_signal").value + "&";
+    buf += "WCGS=" + document.getElementById("wc_get_state").value;
     xml.open("GET", "WCLUPD" + buf, 1);
     xml.send();
 }

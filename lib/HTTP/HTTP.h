@@ -12,6 +12,7 @@ bool handleFileRead(String path);
 String getContentType(String filename);
 void UpdateData(void);
 void UpdateStateWC(void);
+void TimeUpdate(void);
 void SystemUpdate(void);
 void TextUpdate(void);
 void ColorUpdate(void);

@@ -40,6 +40,7 @@ void LoadConfig()
   HCONF.volume = doc["vol"];
   HCONF.WCL = doc["wcsl"];
   HCONF.WCSS = doc["wcss"];
+  HCONF.WCGS = doc["wcgs"];
 
   STATE.WiFiEnable = doc["wifi_st"];
 
@@ -81,10 +82,6 @@ void LoadConfig()
   HCONF.T2_offset = doc["t2_offset"];
 
   CFG.gmt = doc["gmt"];
-
-  // doc["time"].as<String>().toCharArray(TempBuf, 10);
-  // S.H = atoi(strtok(TempBuf, ":"));
-  // S.M = atoi(strtok(NULL, ":"));
 }
 
 void ShowLoadJSONConfig()
@@ -123,6 +120,7 @@ void ShowLoadJSONConfig()
   Serial.printf("####  Volume: %d \r\n", HCONF.volume);
   Serial.printf("####  WCL: %d \r\n", HCONF.WCL);
   Serial.printf("####  WCSS: %d \r\n", HCONF.WCSS);
+  Serial.printf("####  WCGS: %d \r\n", HCONF.WCGS);
   Serial.printf("####  SN: %d", CFG.sn);
   Serial.printf(" FW:");
   Serial.print(CFG.fw);
@@ -143,6 +141,7 @@ void SaveConfig()
   doc["vol"] = HCONF.volume;
   doc["wcsl"] = HCONF.WCL;
   doc["wcss"] = HCONF.WCSS;
+  doc["wcgs"] = HCONF.WCGS;
   doc["wifi_st"] = STATE.WiFiEnable;
 
   doc["c_carnum"] = GetColorNum(&col_carnum);

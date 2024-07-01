@@ -12,6 +12,7 @@ void HTTPinit()
   HTTP.on("/update.json", UpdateData);
   HTTP.on("/wcupd.json", UpdateStateWC);
   HTTP.on("/SysUPD", SystemUpdate);
+  HTTP.on("/TimeUPD", TimeUpdate);
   HTTP.on("/TextUPD", TextUpdate);
   HTTP.on("/ColUPD", ColorUpdate);
   HTTP.on("/SNUPD", SerialNumberUPD);
@@ -93,22 +94,8 @@ void UpdateData()
 /*******************************************************************************************************/
 
 /*******************************************************************************************************/
-void UpdateStateWC()
-{
-  String buf = "{";
-  buf += "\"st_wc1\":";
-  buf += STATE.StateWC1;
-  buf += ",";
-  buf += "\"st_wc2\":";
-  buf += STATE.StateWC2;
-  buf += "}";
-  HTTP.send(200, "text/plain", buf);
-
-}
-/*******************************************************************************************************/
-
-/*******************************************************************************************************/
-void SystemUpdate()
+// Time and Date update
+void TimeUpdate()
 {
   char TempBuf[15];
   char msg[32] = {0};
@@ -131,11 +118,7 @@ void SystemUpdate()
   S.MO = atoi(strtok(NULL, "-"));
   S.D = atoi(strtok(NULL, "-"));
 
-  HCONF.T1_offset = HTTP.arg("T1O").toInt();
-  HCONF.T2_offset = HTTP.arg("T2O").toInt();
-  HCONF.bright = HTTP.arg("BR").toInt();
-
-  HCONF.volume = HTTP.arg("VOL").toInt();
+  CFG.gmt = HTTP.arg("GMT").toInt();
 
   Clock.hour = S.H;
   Clock.minute = S.M;
@@ -143,13 +126,45 @@ void SystemUpdate()
   Clock.month = S.MO;
   Clock.date = S.D;
 
-#ifndef DEBUG
+  sprintf(msg, "GMT: %d", CFG.gmt);
+  Serial.println(msg);
   sprintf(msg, "Time: %d : %d", S.H, S.M);
   Serial.println(msg);
   sprintf(msg, "DataIN: %0004d.%02d.%02d", S.Y, S.MO, S.D);
   Serial.println(msg);
   sprintf(msg, "DataRTC: %0004d.%02d.%02d", Clock.year, Clock.month, Clock.date);
   Serial.println(msg);
+
+  RTC.setTime(Clock);
+
+  Serial.println("Time Update");
+  HTTP.send(200, "text/plain", "OK");
+}
+/*******************************************************************************************************/
+
+/*******************************************************************************************************/
+void UpdateStateWC()
+{
+  String buf = "{";
+  buf += "\"st_wc1\":";
+  buf += STATE.StateWC1;
+  buf += ",";
+  buf += "\"st_wc2\":";
+  buf += STATE.StateWC2;
+  buf += "}";
+  HTTP.send(200, "text/plain", buf);
+}
+/*******************************************************************************************************/
+
+/*******************************************************************************************************/
+void SystemUpdate()
+{
+  HCONF.T1_offset = HTTP.arg("T1O").toInt();
+  HCONF.T2_offset = HTTP.arg("T2O").toInt();
+  HCONF.bright = HTTP.arg("BR").toInt();
+  HCONF.volume = HTTP.arg("VOL").toInt();
+
+#ifndef DEBUG
   Serial.printf("T1_OFFset: %d", HCONF.T1_offset);
   Serial.println();
   Serial.printf("T2_OFFset: %d", HCONF.T2_offset);
@@ -160,7 +175,6 @@ void SystemUpdate()
   Serial.println();
 #endif
 
-  RTC.setTime(Clock);
   SaveConfig();
   STATE.StaticUPD = true;
   STATE.cnt_Supd = 0;
@@ -215,7 +229,7 @@ void TextUpdate()
   Serial.println();
   // #endif
 
-  // SaveConfig();
+  SaveConfig();
   // ShowLoadJSONConfig();
 
   // Show Led state (add function)
@@ -231,9 +245,9 @@ void ColorUpdate()
   struct _col
   {
     // uint8_t CDY = HTTP.arg("CDY").toInt();   // color day weeks
-    uint8_t CC = HTTP.arg("CC").toInt(); // color car num
-    uint8_t CT = HTTP.arg("CT").toInt(); // color time
-    uint8_t CD = HTTP.arg("CD").toInt(); // color date
+    uint8_t CC = HTTP.arg("CC").toInt();   // color car num
+    uint8_t CT = HTTP.arg("CT").toInt();   // color time
+    uint8_t CD = HTTP.arg("CD").toInt();   // color date
     uint8_t CTI = HTTP.arg("CTI").toInt(); // color temp IN
     uint8_t CTO = HTTP.arg("CTO").toInt(); // color temp OUT
     uint8_t CSP = HTTP.arg("CSP").toInt(); // color speed
@@ -277,9 +291,10 @@ void WCLogiqUPD(void)
 {
   HCONF.WCL = HTTP.arg("WCL").toInt();   // WC_STATE_LOGIQ
   HCONF.WCSS = HTTP.arg("WCSS").toInt(); // WC_SENSOR_SIGNAL
+  HCONF.WCGS = HTTP.arg("WCGS").toInt(); // WC_SENSOR_GET_SIGNAL
 
   SaveConfig();
-  Serial.printf("WCL: %d WCSS: %d \r\n", HCONF.WCL, HCONF.WCSS);
+  Serial.printf("WCL: %d WCSS: %d WCGS: %d \r\n", HCONF.WCL, HCONF.WCSS, HCONF.WCGS );
   HTTP.send(200, "text/plain", "Serial Number set");
 }
 /*******************************************************************************************************/

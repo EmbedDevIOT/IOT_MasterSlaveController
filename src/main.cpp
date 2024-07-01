@@ -101,13 +101,14 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.2.1";
-    CFG.fwdate = "30.06.2024";
+    CFG.fw = "0.2.2";
+    CFG.fwdate = "1.07.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
     SystemInit();
+
     // SPIFFS INIT
     if (!SPIFFS.begin(true))
     {
