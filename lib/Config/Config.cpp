@@ -217,6 +217,8 @@ void DebugInfo()
     // Serial.println(message);
     // Serial.printf("Brightness:");
     // Serial.println(HCONF.bright);
+    sprintf(message, "GMT: %d", CFG.gmt);
+    Serial.println(message);
     sprintf(message, "RTC Time: %02d:%02d:%02d", Clock.hour, Clock.minute, Clock.second);
     Serial.println(message);
     sprintf(message, "RTC Date: %4d.%02d.%02d", Clock.year, Clock.month, Clock.date);
@@ -305,8 +307,12 @@ void getTimeChar(char *array)
 {
   DateTime now = RTC.getTime();
 
-  array[0] = now.hour / 10 + '0';
-  array[1] = now.hour % 10 + '0';
+  uint8_t TimGMT = Clock.hour - CFG.gmt;
+
+  // array[0] = now.hour / 10 + '0';
+  // array[1] = now.hour % 10 + '0';
+  array[0] = TimGMT / 10 + '0';
+  array[1] = TimGMT % 10 + '0';
   array[2] = now.minute / 10 + '0';
   array[3] = now.minute % 10 + '0';
   array[4] = now.second / 10 + '0';
@@ -359,13 +365,9 @@ void Send_GPSdata()
   memset(buf_crc, 0, strlen(buf_crc));
   memset(xml, 0, strlen(xml));
 
-  if (CFG.gmt == 0)
+  if (CFG.gmt <= 0)
   {
     strcat(buf_crc, "<gmt>");
-  }
-  else if (CFG.gmt < 0)
-  {
-    strcat(buf_crc, "<gmt>-");
   }
   else
     strcat(buf_crc, "<gmt>+");

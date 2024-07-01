@@ -232,7 +232,7 @@ function BTimeAutoSet() {
 
     xml.open("GET","TimeUPD" + buf,true);
     xml.send();
-    // setTimeout("reload()",1000);
+    setTimeout("reload()",1000);
     alert("Настройки сохранены.");
 }
 

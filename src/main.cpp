@@ -101,7 +101,7 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.2.2";
+    CFG.fw = "0.2.3";
     CFG.fwdate = "1.07.2024";
 
     Serial.begin(UARTSpeed);
@@ -542,6 +542,7 @@ void btn2Click()
             Send_BS_UserData(name_1, name_2);
         }
         SaveConfig();
+        Send_GPSdata();
         Serial.printf("GMT: %d \r\n", CFG.gmt);
 
         break;
@@ -932,6 +933,7 @@ void btn4Click()
         }
         Serial.printf("GMT: %d \r\n", CFG.gmt);
         SaveConfig();
+        Send_GPSdata();
         break;
     // MIN ++
     case _MIN:
@@ -1176,7 +1178,8 @@ void UART_Recieve_Data()
 
 void Tell_me_CurrentTime()
 {
-    String buf = "/sound/S/curtime.mp3";
+    // String buf = "/sound/S/curtime.mp3";
+    String buf = "/sound/S/curtime.wav";
     if (!Amplifier.isRunning())
     {
         Amplifier.connecttoFS(SPIFFS, buf.c_str());
@@ -1191,9 +1194,18 @@ void Tell_me_CurrentTime()
 
     Clock = RTC.getTime();
     buf = "/sound/H/";
-    buf += "ch";
-    buf += Clock.hour + CFG.gmt;
-    buf += ".mp3";
+
+    if ((Clock.hour) != 24)
+    {
+        buf += "ch";
+        buf += Clock.hour;
+    }
+    else
+    {
+        buf += "ch0";
+    }
+    // buf += ".mp3";
+    buf += ".wav";
     Serial.printf(buf.c_str());
     Serial.println();
 
@@ -1213,7 +1225,8 @@ void Tell_me_CurrentTime()
     buf = "/sound/Mi/";
     buf += "min";
     buf += Clock.minute;
-    buf += ".mp3";
+    // buf += ".mp3";
+    buf += ".wav";
     Serial.printf(buf.c_str());
     Serial.println();
 
@@ -1232,10 +1245,10 @@ void Tell_me_CurrentTime()
 void Tell_me_DoorState(bool state)
 {
     String buf;
-    switch (state)
+    if (state)
     {
-    case 1:
-        buf = "/sound/S/dclose.mp3";
+        // buf = "/sound/S/dclose.mp3";
+        buf = "/sound/S/dclose.wav";
         if (!Amplifier.isRunning())
         {
             Amplifier.connecttoFS(SPIFFS, buf.c_str());
@@ -1246,10 +1259,11 @@ void Tell_me_DoorState(bool state)
             Amplifier.loop();
         }
         buf.clear();
-        break;
-
-    case 0:
-        buf = "/sound/S/dopen.mp3";
+    }
+    else
+    {
+        // buf = "/sound/S/dopen.mp3";
+        buf = "/sound/S/dopen.wav";
         if (!Amplifier.isRunning())
         {
             Amplifier.connecttoFS(SPIFFS, buf.c_str());
@@ -1260,16 +1274,14 @@ void Tell_me_DoorState(bool state)
             Amplifier.loop();
         }
         buf.clear();
-        break;
-    default:
-        break;
     }
 }
 
 void Tell_me_CurrentData()
 {
     String buf;
-    buf = "/sound/S/today.mp3";
+    // buf = "/sound/S/today.mp3";
+    buf = "/sound/S/today.wav";
 
     if (!Amplifier.isRunning())
     {
@@ -1287,25 +1299,32 @@ void Tell_me_CurrentData()
     switch (Clock.day)
     {
     case MON: // Monday
-        buf += "mon.mp3";
+        // buf += "mon.mp3";
+        buf += "mon.wav";
         break;
     case TUE: // Tuesday
-        buf += "thu.mp3";
+        // buf += "thu.mp3";
+        buf += "thu.wav";
         break;
     case WED: // Wednesday
-        buf += "wed.mp3";
+        // buf += "wed.mp3";
+        buf += "wed.wav";
         break;
     case THU: // Thursday
-        buf += "thu.mp3";
+        // buf += "thu.mp3";
+        buf += "thu.wav";
         break;
     case FRI: // Friday
-        buf += "fri.mp3";
+        // buf += "fri.mp3";
+        buf += "fri.wav";
         break;
     case SAT: // Saturday
-        buf += "sat.mp3";
+        // buf += "sat.mp3";
+        buf += "sat.wav";
         break;
     case SUN: // Sunday
-        buf += "sun.mp3";
+        // buf += "sun.mp3";
+        buf += "sun.wav";
         break;
     default:
         break;
@@ -1328,7 +1347,8 @@ void Tell_me_CurrentData()
     buf = "/sound/NM/";
     buf += "d";
     buf += Clock.date;
-    buf += ".mp3";
+    // buf += ".mp3";
+    buf += ".wav";
 
     if (!Amplifier.isRunning())
     {
@@ -1345,40 +1365,52 @@ void Tell_me_CurrentData()
     switch (Clock.month)
     {
     case YAN:
-        buf += "yan.mp3";
+        // buf += "yan.mp3";
+        buf += "yan.wav";
         break;
     case FEB:
-        buf += "feb.mp3";
+        // buf += "feb.mp3";
+        buf += "feb.wav";
         break;
     case MAR:
-        buf += "mar.mp3";
+        // buf += "mar.mp3";
+        buf += "mar.wav";
         break;
     case APR:
-        buf += "apr.mp3";
+        // buf += "apr.mp3";
+        buf += "apr.wav";
         break;
     case MAY:
-        buf += "may.mp3";
+        // buf += "may.mp3";
+        buf += "may.wav";
         break;
     case JUN:
-        buf += "jun.mp3";
+        // buf += "jun.mp3";
+        buf += "jun.wav";
         break;
     case JUL:
-        buf += "jul.mp3";
+        // buf += "jul.mp3";
+        buf += "jul.wav";
         break;
     case AUG:
-        buf += "aug.mp3";
+        // buf += "aug.mp3";
+        buf += "aug.wav";
         break;
     case SEP:
-        buf += "sep.mp3";
+        // buf += "sep.mp3";
+        buf += "sep.wav";
         break;
     case OCTB:
-        buf += "oct.mp3";
+        // buf += "oct.mp3";
+        buf += "oct.wav";
         break;
     case NOV:
-        buf += "nov.mp3";
+        // buf += "nov.mp3";
+        buf += "nov.wav";
         break;
     case DECM:
-        buf += "dec.mp3";
+        // buf += "dec.mp3";
+        buf += "dec.wav";
         break;
     default:
         break;
