@@ -136,7 +136,8 @@ void TimeUpdate()
   Serial.println(msg);
 
   RTC.setTime(Clock);
-
+  SaveConfig();
+  
   Serial.println("Time Update");
   HTTP.send(200, "text/plain", "OK");
 }
@@ -294,7 +295,7 @@ void WCLogiqUPD(void)
   HCONF.WCGS = HTTP.arg("WCGS").toInt(); // WC_SENSOR_GET_SIGNAL
 
   SaveConfig();
-  Serial.printf("WCL: %d WCSS: %d WCGS: %d \r\n", HCONF.WCL, HCONF.WCSS, HCONF.WCGS );
+  Serial.printf("WCL: %d WCSS: %d WCGS: %d \r\n", HCONF.WCL, HCONF.WCSS, HCONF.WCGS);
   HTTP.send(200, "text/plain", "Serial Number set");
 }
 /*******************************************************************************************************/

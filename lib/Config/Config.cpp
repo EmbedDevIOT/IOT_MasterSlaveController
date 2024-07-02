@@ -1,24 +1,6 @@
 #include "Config.h"
 
 //==========================================================================
-void ColorSetHEX(struct color *C, uint8_t _color)
-{
-  // switch (_color)
-  // {
-  // case RED:
-  //   C->hex = 0xFF0000;
-  //   break;
-  // case GREEN:
-  //   C->hex = 0x00FF00;
-  //   break;
-
-  // default:
-  //   break;
-  // }
-}
-//==========================================================================
-
-//==========================================================================
 void ColorSet(struct color *CS, uint8_t _color)
 {
   switch (_color)
@@ -281,8 +263,13 @@ void SystemFactoryReset()
   CFG.MK4 = 0;
 
   HCONF.bright = 90;
+  HCONF.volume = 100;
   HCONF.T1_offset = 0;
   HCONF.T2_offset = 0;
+  HCONF.WCL = NORMAL;
+  HCONF.WCSS = SENSOR_CLOSE;
+
+  STATE.WiFiEnable = true;
 
   ColorSet(&col_carnum, WHITE);
   ColorSet(&col_wc1, GREEN);
@@ -295,9 +282,6 @@ void SystemFactoryReset()
   UserText.hide_t = false;
   UserText.carnum = 7;
 
-  // memset(UserText.runtext, 0, strlen(UserText.runtext));
-  // strcat(UserText.runtext, " ");
-
   memset(UserText.carname, 0, strlen(UserText.carname));
   strcat(UserText.carname, "Вагон ");
 }
@@ -308,7 +292,12 @@ void getTimeChar(char *array)
   DateTime now = RTC.getTime();
 
   uint8_t TimGMT = Clock.hour - CFG.gmt;
-
+  
+  if (TimGMT >= 24)
+  {
+    TimGMT = TimGMT - 24;
+  }
+  
   // array[0] = now.hour / 10 + '0';
   // array[1] = now.hour % 10 + '0';
   array[0] = TimGMT / 10 + '0';

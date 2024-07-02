@@ -82,8 +82,8 @@ void configure();
 
 Button b1 = Button(bt1, &btn1Click);
 Button b2 = Button(bt2, &btn2Click);
-// Button b3 = Button(bt3, &btn3Click, &btn3Hold);
-Button b3 = Button(bt3, &btn3Click);
+Button b3 = Button(bt3, &btn3Click, &btn3Hold, 10000, 500);
+// Button b3 = Button(bt3, &btn3Click);
 Button b4 = Button(bt4, &btn4Click);
 // get it activated (hold function invoked) only every 500ms
 // Button b4 = Button(929, &b4Click, &b4Hold, 1000, 500);
@@ -101,8 +101,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.2.3";
-    CFG.fwdate = "1.07.2024";
+    CFG.fw = "0.2.5";
+    CFG.fwdate = "2.07.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -149,10 +149,10 @@ void setup()
     if (STATE.WiFiEnable)
     {
         WIFIinit();
-        delay(500);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
 
         HTTPinit(); // HTTP server initialisation
-        delay(1000);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 
     Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
@@ -542,9 +542,7 @@ void btn2Click()
             Send_BS_UserData(name_1, name_2);
         }
         SaveConfig();
-        Send_GPSdata();
         Serial.printf("GMT: %d \r\n", CFG.gmt);
-
         break;
     // MIN --
     case _MIN:
@@ -653,7 +651,7 @@ void btn2Click()
             sprintf(name_2, "Реверс");
             break;
         case ONE_HALL:
-            sprintf(name_2, "1_Тамбур");
+            sprintf(name_2, "1 Тамбур");
             break;
         default:
             break;
@@ -825,7 +823,7 @@ void btn3Click()
         Serial.printf("WC Signal Logiq:\r\n");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
-        strcat(name_1, "ЛогикаWC");
+        strcat(name_1, "РасполWC");
         if (HCONF.WCL == NORMAL)
         {
             sprintf(name_2, "Нормальн");
@@ -836,7 +834,7 @@ void btn3Click()
         }
         else if (HCONF.WCL == ONE_HALL)
         {
-            sprintf(name_2, "1_Тамбур");
+            sprintf(name_2, "1 Тамбур");
         }
         Send_BS_UserData(name_1, name_2);
         break;
@@ -875,18 +873,47 @@ void btn3Click()
         break;
     }
 }
-// Button 3 Hold Handling (Enter the menu)
+// Button 3 Hold Handling (Reset to default)
 void btn3Hold()
 {
     Serial.print("button 3 hold");
 
     if (menu == IDLE)
     {
-        menu = _CAR_NUM;
+        uint32_t now;
+        uint8_t cnt = 3;
+
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+
         STATE.DUPDBlock = true;
-        strcat(name_1, "Вагон");
-        sprintf(name_2, "%d", UserText.carnum);
+        strcat(name_1, "Cброс");
+        itoa(cnt, name_2 + strlen(name_2), DEC);
         Send_BS_UserData(name_1, name_2);
+
+        now = millis();
+        while (millis() - now < 3500)
+        {
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            if (cnt != 0)
+            {
+                cnt--;
+                memset(name_2, 0, 25);
+                itoa(cnt, name_2 + strlen(name_2), DEC);
+                Send_BS_UserData(name_1, name_2);
+            }
+        }
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+        Serial.println("#### FACTORY RESET ####");
+        memset(name_1, 0, 25);
+        memset(name_2, 0, 25);
+        strcat(name_1, "Сброшено");
+        Send_BS_UserData(name_1, name_2);
+        SystemFactoryReset();
+        SaveConfig();
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        Serial.println("#### SAVE DONE ####");
+        ESP.restart();
     }
 }
 // Button 4 Handling (+)
@@ -933,7 +960,6 @@ void btn4Click()
         }
         Serial.printf("GMT: %d \r\n", CFG.gmt);
         SaveConfig();
-        Send_GPSdata();
         break;
     // MIN ++
     case _MIN:
@@ -1044,7 +1070,7 @@ void btn4Click()
             sprintf(name_2, "Реверс");
             break;
         case ONE_HALL:
-            sprintf(name_2, "1_Тамбур");
+            sprintf(name_2, "1 Тамбур");
             break;
         default:
             break;

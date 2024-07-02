@@ -228,7 +228,7 @@ function BTimeAutoSet() {
     buf += "T=" + now.getHours() + ":" + now.getMinutes() + "&";
     buf += "D=" + now.getFullYear() + "-" + (now.getUTCMonth() + 1) + "-" + now.getDate() + "&";
     
-    buf += "GMT=" + document.getElementById("gmt").value;;
+    buf += "GMT=" + document.getElementById("gmt").value;
 
     xml.open("GET","TimeUPD" + buf,true);
     xml.send();
