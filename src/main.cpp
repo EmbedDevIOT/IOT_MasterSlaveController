@@ -878,8 +878,8 @@ void btn3Hold()
 {
     Serial.print("button 3 hold");
 
-    if (menu == IDLE)
-    {
+    // if (menu == IDLE)
+    // {
         uint32_t now;
         uint8_t cnt = 3;
 
@@ -903,7 +903,6 @@ void btn3Hold()
                 Send_BS_UserData(name_1, name_2);
             }
         }
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
         Serial.println("#### FACTORY RESET ####");
         memset(name_1, 0, 25);
         memset(name_2, 0, 25);
@@ -914,7 +913,7 @@ void btn3Hold()
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         Serial.println("#### SAVE DONE ####");
         ESP.restart();
-    }
+    // }
 }
 // Button 4 Handling (+)
 void btn4Click()
