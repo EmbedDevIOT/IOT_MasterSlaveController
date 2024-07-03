@@ -33,7 +33,7 @@ DallasTemperature ds18b20_2(&oneWire2);
 
 HardwareSerial RS485(2);
 
-AnalogButtons analogButtons(KBD_PIN, INPUT, 3, 100);
+AnalogButtons analogButtons(KBD_PIN, INPUT, 5, 150);
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -101,8 +101,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.2.5";
-    CFG.fwdate = "2.07.2024";
+    CFG.fw = "0.2.6";
+    CFG.fwdate = "3.07.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
