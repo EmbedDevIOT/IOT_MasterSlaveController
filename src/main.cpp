@@ -33,7 +33,12 @@ DallasTemperature ds18b20_2(&oneWire2);
 
 HardwareSerial RS485(2);
 
-PCF8574 I2CBUT(0x20); // object with work I2C ext. (default)
+Button btn1(7, INPUT, LOW);
+Button btn2(6, INPUT, LOW);
+Button btn3(5, INPUT, LOW);
+Button btn4(4, INPUT, LOW);
+Button btn5(3, INPUT, LOW);
+
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -75,12 +80,12 @@ void Tell_me_DoorState(bool state);
 //=======================================================================
 void I2CExpanderInit()
 {
-    I2CBUT.begin();
-    I2CBUT.pinMode(P7, INPUT_PULLUP);
-    I2CBUT.pinMode(P6, INPUT_PULLUP);
-    I2CBUT.pinMode(P5, INPUT_PULLUP);
-    I2CBUT.pinMode(P4, INPUT_PULLUP);
-    I2CBUT.pinMode(P3, INPUT_PULLUP);
+    // I2CBUT.begin();
+    // I2CBUT.pinMode(P7, INPUT_PULLUP);
+    // I2CBUT.pinMode(P6, INPUT_PULLUP);
+    // I2CBUT.pinMode(P5, INPUT_PULLUP);
+    // I2CBUT.pinMode(P4, INPUT_PULLUP);
+    // I2CBUT.pinMode(P3, INPUT_PULLUP);
 }
 //=======================================================================
 static uint8_t DS_dim(uint8_t i)
@@ -92,14 +97,13 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.2.8";
+    CFG.fw = "0.3.0";
     CFG.fwdate = "9.07.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
     SystemInit();
-
 
     // SPIFFS INIT
     if (!SPIFFS.begin(true))
@@ -197,7 +201,7 @@ void loop()
     {
         HandleClient();
     }
-    // Button Handler 
+    ButtonHandler();
 }
 //=======================================================================
 
@@ -477,12 +481,72 @@ void SendtoRS485()
 //=========================================================================
 void ButtonHandler()
 {
-    int p7 =! I2CBUT.digitalRead(P7); // read P1
-    int p6 =! I2CBUT.digitalRead(P6); // read P1
-    int p5 =! I2CBUT.digitalRead(P5); // read P1
-    int p4 =! I2CBUT.digitalRead(P4); // read P1
-    int p3 =! I2CBUT.digitalRead(P3); // read P1
+    btn1.tick();
+    btn2.tick();
+    btn3.tick();
+    btn4.tick();
+    btn5.tick();
 
+
+    if (btn1.click())
+    {
+        Serial.printf(" BTN 1 Click \r\n");
+        btn1.clear();
+        btn2.clear();
+        btn3.clear();
+        btn4.clear();
+        btn5.clear();
+    }
+
+    if (btn1.getSteps() == 50)
+    {
+        Serial.printf(" BTN 1 STEP 50 \r\n");
+        btn1.clear();
+    }
+
+    if (btn2.click())
+    {
+        Serial.printf(" BTN 2 Click \r\n");
+        btn1.clear();
+        btn2.clear();
+        btn3.clear();
+        btn4.clear();
+        btn5.clear();
+    }
+
+    if (btn3.click())
+    {
+        Serial.printf(" BTN 3 Click \r\n");
+        btn1.clear();
+        btn2.clear();
+        btn3.clear();
+        btn4.clear();
+        btn5.clear();
+    }
+
+    if (btn4.click())
+    {
+        Serial.printf(" BTN 4 Click \r\n");
+        btn1.clear();
+        btn2.clear();
+        btn3.clear();
+        btn4.clear();
+        btn5.clear();
+    }
+
+    if (btn5.click())
+    {
+        Serial.printf(" BTN 5 Click \r\n");
+        btn1.clear();
+        btn2.clear();
+        btn3.clear();
+        btn4.clear();
+        btn5.clear();
+    }
+    if (btn5.getSteps() == 50)
+    {
+        Serial.printf(" BTN 5 STEP 50 \r\n");
+    }
 }
 //=========================================================================
 
