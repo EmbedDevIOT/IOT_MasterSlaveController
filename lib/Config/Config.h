@@ -11,6 +11,7 @@
 #include <microDS3231.h>
 #include <ArduinoJson.h>
 #include <AnalogButtons.h>
+#include "PCF8574.h"
 // #include <ElegantOTA.h>
 
 #include <OneWire.h>
@@ -287,6 +288,7 @@ void ColorSet(struct color *CS, uint8_t _color);
 int GetColorNum(struct color *C);
 void UserPresetInit(void);
 void SystemInit(void);     //  System Initialisation (variables and structure)
+void I2C_Scanning(void);
 void ShowInfoDevice(void); //  Show information or this Device
 void GetChipID(void);
 String GetMacAdr();

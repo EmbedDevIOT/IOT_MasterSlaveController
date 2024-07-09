@@ -34,6 +34,7 @@ DallasTemperature ds18b20_2(&oneWire2);
 HardwareSerial RS485(2);
 
 AnalogButtons analogButtons(KBD_PIN, INPUT, 5, 150);
+PCF8574 I2CBUT(0x20);   // object with work I2C ext. (default)
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -61,6 +62,7 @@ void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void HandlerTask500(void *pvParameters);
 void HandlerTask1Wire(void *pvParameters);
+void I2CExpanderInit();
 void ButtonHandler();
 void SendtoRS485();
 void GetDSData(void);
@@ -90,7 +92,15 @@ Button b4 = Button(bt4, &btn4Click);
 Button b5 = Button(bt5, &btn5Click);
 
 //=======================================================================
-
+void I2CExpanderInit()
+{
+    I2CBUT.begin();
+    I2CBUT.pinMode(P7,INPUT_PULLUP);
+    I2CBUT.pinMode(P6,INPUT_PULLUP);
+    I2CBUT.pinMode(P5,INPUT_PULLUP);
+    I2CBUT.pinMode(P4,INPUT_PULLUP);
+    I2CBUT.pinMode(P3,INPUT_PULLUP);
+}
 //=======================================================================
 static uint8_t DS_dim(uint8_t i)
 {
@@ -101,13 +111,16 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.2.6";
-    CFG.fwdate = "3.07.2024";
+    CFG.fw = "0.2.7";
+    CFG.fwdate = "9.07.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
     SystemInit();
+
+    I2C_Scanning();
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
 
     // SPIFFS INIT
     if (!SPIFFS.begin(true))
