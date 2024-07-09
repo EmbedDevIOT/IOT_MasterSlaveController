@@ -10,7 +10,8 @@
 #include "SPIFFS.h"
 #include <microDS3231.h>
 #include <ArduinoJson.h>
-#include <AnalogButtons.h>
+#include <EncButton.h>
+// #include <AnalogButtons.h>
 #include "PCF8574.h"
 // #include <ElegantOTA.h>
 
