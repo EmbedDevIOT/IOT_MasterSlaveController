@@ -40,7 +40,7 @@
 //======================    G P I O        =====================
 #define KBD_PIN 36 // Pin Analog Keyboard
 
-#define LED_WiFi 33 // Led State WiFi Connection
+#define LED_WiFi 13 // Led State WiFi Connection
 #define LED_ST 12   // Status
 
 #define T1 4 // Temperature sensor ds18b20 1

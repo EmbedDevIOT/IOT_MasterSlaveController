@@ -33,11 +33,11 @@ DallasTemperature ds18b20_2(&oneWire2);
 
 HardwareSerial RS485(2);
 
-Button btn1(7, INPUT, LOW);
-Button btn2(6, INPUT, LOW);
-Button btn3(5, INPUT, LOW);
-Button btn4(4, INPUT, LOW);
-Button btn5(3, INPUT, LOW);
+// Button btn1(7, INPUT, LOW);
+// Button btn2(6, INPUT, LOW);
+// Button btn3(5, INPUT, LOW);
+// Button btn4(4, INPUT, LOW);
+// Button btn5(3, INPUT, LOW);
 
 //=======================================================================
 
@@ -97,8 +97,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.3.0";
-    CFG.fwdate = "9.07.2024";
+    CFG.fw = "0.3.1";
+    CFG.fwdate = "10.07.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -132,6 +132,11 @@ void setup()
 
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
+
+    pinMode(LED_ST, OUTPUT);
+    digitalWrite(LED_ST, LOW);
+    pinMode(LED_WiFi, OUTPUT);
+    digitalWrite(LED_WiFi, LOW);
 
     Serial.println("Starting Analog buttons");
 
@@ -201,7 +206,7 @@ void loop()
     {
         HandleClient();
     }
-    ButtonHandler();
+    // ButtonHandler();
 }
 //=======================================================================
 
@@ -286,8 +291,12 @@ void HandlerCore1(void *pvParameters)
     Serial.println(xPortGetCoreID());
     for (;;)
     {
+        static bool VD = true;
+        VD =!VD;
+
         Clock = RTC.getTime();
 
+        digitalWrite(LED_WiFi,!VD);
         // ButtonHandler();
 
         DebugInfo();
@@ -461,17 +470,21 @@ void SendtoRS485()
 
         if (STATE.StaticUPD && STATE.cnt_Supd < 2)
         {
+            digitalWrite(LED_ST,HIGH);
             Send_ITdata(1);
             vTaskDelay(500 / portTICK_PERIOD_MS);
+            digitalWrite(LED_ST,LOW);
             Send_ITdata(2);
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
 
         if (!STATE.DUPDBlock)
         {
+            digitalWrite(LED_ST,HIGH);
             Send_BSdata();
             vTaskDelay(100 / portTICK_PERIOD_MS);
             Send_GPSdata();
+            digitalWrite(LED_ST,LOW);
         }
         sec_cnt = 0;
     }
@@ -479,75 +492,75 @@ void SendtoRS485()
 //=========================================================================
 
 //=========================================================================
-void ButtonHandler()
-{
-    btn1.tick();
-    btn2.tick();
-    btn3.tick();
-    btn4.tick();
-    btn5.tick();
+// void ButtonHandler()
+// {
+//     btn1.tick();
+//     btn2.tick();
+//     btn3.tick();
+//     btn4.tick();
+//     btn5.tick();
 
 
-    if (btn1.click())
-    {
-        Serial.printf(" BTN 1 Click \r\n");
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
+//     if (btn1.click())
+//     {
+//         Serial.printf(" BTN 1 Click \r\n");
+//         btn1.clear();
+//         btn2.clear();
+//         btn3.clear();
+//         btn4.clear();
+//         btn5.clear();
+//     }
 
-    if (btn1.getSteps() == 50)
-    {
-        Serial.printf(" BTN 1 STEP 50 \r\n");
-        btn1.clear();
-    }
+//     if (btn1.getSteps() == 50)
+//     {
+//         Serial.printf(" BTN 1 STEP 50 \r\n");
+//         btn1.clear();
+//     }
 
-    if (btn2.click())
-    {
-        Serial.printf(" BTN 2 Click \r\n");
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
+//     if (btn2.click())
+//     {
+//         Serial.printf(" BTN 2 Click \r\n");
+//         btn1.clear();
+//         btn2.clear();
+//         btn3.clear();
+//         btn4.clear();
+//         btn5.clear();
+//     }
 
-    if (btn3.click())
-    {
-        Serial.printf(" BTN 3 Click \r\n");
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
+//     if (btn3.click())
+//     {
+//         Serial.printf(" BTN 3 Click \r\n");
+//         btn1.clear();
+//         btn2.clear();
+//         btn3.clear();
+//         btn4.clear();
+//         btn5.clear();
+//     }
 
-    if (btn4.click())
-    {
-        Serial.printf(" BTN 4 Click \r\n");
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
+//     if (btn4.click())
+//     {
+//         Serial.printf(" BTN 4 Click \r\n");
+//         btn1.clear();
+//         btn2.clear();
+//         btn3.clear();
+//         btn4.clear();
+//         btn5.clear();
+//     }
 
-    if (btn5.click())
-    {
-        Serial.printf(" BTN 5 Click \r\n");
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
-    if (btn5.getSteps() == 50)
-    {
-        Serial.printf(" BTN 5 STEP 50 \r\n");
-    }
-}
+//     if (btn5.click())
+//     {
+//         Serial.printf(" BTN 5 Click \r\n");
+//         btn1.clear();
+//         btn2.clear();
+//         btn3.clear();
+//         btn4.clear();
+//         btn5.clear();
+//     }
+//     if (btn5.getSteps() == 50)
+//     {
+//         Serial.printf(" BTN 5 STEP 50 \r\n");
+//     }
+// }
 //=========================================================================
 
 void UART_Recieve_Data()
