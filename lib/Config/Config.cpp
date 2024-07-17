@@ -666,7 +666,7 @@ void Send_ITdata(uint8_t adr)
   strcat(buf_crc, "<text>$temp2°C</text>\r\n");
   strcat(buf_crc, "<font>[8=0+7+1]1+thin+condensed+regular.font</font>\r\n");
   strcat(buf_crc, "</zone>\r\n");
-  strcat(buf_crc, "\r\n");
+  // strcat(buf_crc, "\r\n");
   //=======================================
 
   strcat(buf_crc, "</adr>\r\n");
