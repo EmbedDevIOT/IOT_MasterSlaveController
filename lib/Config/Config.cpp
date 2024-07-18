@@ -330,24 +330,28 @@ void SystemFactoryReset()
 /***************************************************************************************/
 void getTimeChar(char *array)
 {
-  DateTime now = RTC.getTime();
+  // DateTime now = RTC.getTime();
 
   uint8_t TimGMT = Clock.hour - CFG.gmt;
-  
+
   if (TimGMT >= 24)
   {
     TimGMT = TimGMT - 24;
   }
-  
+
   // array[0] = now.hour / 10 + '0';
   // array[1] = now.hour % 10 + '0';
   array[0] = TimGMT / 10 + '0';
   array[1] = TimGMT % 10 + '0';
-  array[2] = now.minute / 10 + '0';
-  array[3] = now.minute % 10 + '0';
-  array[4] = now.second / 10 + '0';
-  array[5] = now.second % 10 + '0';
+  array[2] = Clock.minute / 10 + '0';
+  array[3] = Clock.minute % 10 + '0';
+  array[4] = Clock.second / 10 + '0';
+  array[5] = Clock.second % 10 + '0';
   array[6] = '\0';
+  for (uint8_t i = 0; i < 6; i++)
+  {
+    Serial.print(array[i]);
+  }
 }
 /**********************************************************************************/
 
@@ -460,26 +464,12 @@ void Send_GPSdata()
 void Send_ITdata(uint8_t adr)
 {
   unsigned int crc;
-  char buf_crc[4096] = "";
+  char buf_crc[4800] = "";
   memset(buf_crc, 0, strlen(buf_crc));
-  char xml[4096] = "";
+  char xml[4800] = "";
   memset(xml, 0, strlen(xml));
 
-  switch (adr)
-  {
-  case 1:
-    strcat(buf_crc, "<adr id=\"1\">\r\n");
-    break;
-  case 2:
-    strcat(buf_crc, "<adr id=\"2\">\r\n");
-    break;
-  case 3:
-    strcat(buf_crc, "<adr id=\"3\">\r\n");
-    break;
-  default:
-    break;
-  }
-
+  strcat(buf_crc, "<adr id=\"1\">\r\n");
   strcat(buf_crc, "<cabin_mode>1</cabin_mode>\r\n");
   strcat(buf_crc, "<TsizeDx>\r\n");
   strcat(buf_crc, "<X>128</X>\r\n");
@@ -666,12 +656,204 @@ void Send_ITdata(uint8_t adr)
   strcat(buf_crc, "<text>$temp2°C</text>\r\n");
   strcat(buf_crc, "<font>[8=0+7+1]1+thin+condensed+regular.font</font>\r\n");
   strcat(buf_crc, "</zone>\r\n");
-  // strcat(buf_crc, "\r\n");
+  strcat(buf_crc, "\r\n");
+  //=======================================
+  strcat(buf_crc, "</adr>\r\n");
+  //========= adress 1 end=================
+
+  strcat(buf_crc, "<adr id=\"2\">\r\n");
+  strcat(buf_crc, "<cabin_mode>1</cabin_mode>\r\n");
+  strcat(buf_crc, "<TsizeDx>\r\n");
+  strcat(buf_crc, "<X>128</X>\r\n");
+  strcat(buf_crc, "<Y>64</Y>\r\n");
+  strcat(buf_crc, "</TsizeDx>\r\n");
+  strcat(buf_crc, "<TsizeMx>\r\n");
+  strcat(buf_crc, "<X>2</X>\r\n");
+  strcat(buf_crc, "<Y>2</Y>\r\n");
+  strcat(buf_crc, "</TsizeMx>\r\n");
+  strcat(buf_crc, "<TsizeLx>\r\n");
+  strcat(buf_crc, "<X>256</X>\r\n");
+  strcat(buf_crc, "<Y>128</Y>\r\n");
+  strcat(buf_crc, "</TsizeLx>\r\n");
+  strcat(buf_crc, "<rgb>1</rgb>\r\n");
+  strcat(buf_crc, "<rgb_balance>\r\n");
+  strcat(buf_crc, "<R>0</R>\r\n");
+  strcat(buf_crc, "<G>0</G>\r\n");
+  strcat(buf_crc, "<B>0</B>\r\n");
+  strcat(buf_crc, "</rgb_balance>\r\n");
+  strcat(buf_crc, "<min_bright>");
+  itoa(HCONF.bright, buf_crc + strlen(buf_crc), DEC);
+  strcat(buf_crc, "</min_bright>\r\n");
+  strcat(buf_crc, "<max_bright>100</max_bright>\r\n");
+  strcat(buf_crc, "<auto_bright>0</auto_bright>\r\n");
+  strcat(buf_crc, "<zones>6</zones>\r\n");
+  strcat(buf_crc, "\r\n");
+
+  //=============== ZONE 1 ================
+  strcat(buf_crc, "<zone id=\"1\">\r\n");
+  strcat(buf_crc, "<startX>1</startX>\r\n");
+  strcat(buf_crc, "<startY>1</startY>\r\n");
+  strcat(buf_crc, "<size>\r\n");
+  strcat(buf_crc, "<X>74</X>\r\n");
+  strcat(buf_crc, "<Y>16</Y>\r\n");
+  strcat(buf_crc, "</size>\r\n");
+  strcat(buf_crc, "<color>\r\n");
+  // Carnum Color
+  // ColorWrite(buf_crc, &col_carnum);
+  // Carnum color END
+  strcat(buf_crc, "</color>\r\n");
+  strcat(buf_crc, "<bgcolor>\r\n");
+  strcat(buf_crc, "<R>0</R>\r\n");
+  strcat(buf_crc, "<G>0</G>\r\n");
+  strcat(buf_crc, "<B>0</B>\r\n");
+  strcat(buf_crc, "</bgcolor>\r\n");
+  strcat(buf_crc, "<mode>0</mode>\r\n");
+  strcat(buf_crc, "<align>center</align>\r\n");
+  strcat(buf_crc, "<text>");
+  strcat(buf_crc, "$textbs");
+  strcat(buf_crc, "</text>\r\n");
+  strcat(buf_crc, "<font>[16=0+14+2]2+medium+condensed+regular.font</font>\r\n");
+  strcat(buf_crc, "</zone>\r\n");
+  strcat(buf_crc, "\r\n");
   //=======================================
 
-  strcat(buf_crc, "</adr>\r\n");
-  crc = CRC16_mb(buf_crc, strlen(buf_crc));
+  //=============== ZONE 2 ================
+  strcat(buf_crc, "<zone id=\"2\">\r\n");
+  strcat(buf_crc, "<startX>80</startX>\r\n");
+  strcat(buf_crc, "<startY>1</startY>\r\n");
+  strcat(buf_crc, "<size>\r\n");
+  strcat(buf_crc, "<X>49</X>\r\n");
+  strcat(buf_crc, "<Y>16</Y>\r\n");
+  strcat(buf_crc, "</size>\r\n");
+  strcat(buf_crc, "<color>\r\n");
+  // Time Color
+  ColorWrite(buf_crc, &col_time);
+  // Time Color END
+  strcat(buf_crc, "</color>\r\n");
+  strcat(buf_crc, "<bgcolor>\r\n");
+  strcat(buf_crc, "<R>0</R>\r\n");
+  strcat(buf_crc, "<G>0</G>\r\n");
+  strcat(buf_crc, "<B>0</B>\r\n");
+  strcat(buf_crc, "</bgcolor>\r\n");
+  strcat(buf_crc, "<mode>0</mode>\r\n");
+  strcat(buf_crc, "<align>center</align>\r\n");
+  strcat(buf_crc, "<text>$time</text>\r\n");
+  strcat(buf_crc, "<font>[16=0+14+2]2+medium+condensed+regular.font</font>\r\n");
+  strcat(buf_crc, "</zone>\r\n");
+  strcat(buf_crc, "\r\n");
+  //=======================================
 
+  //=============== ZONE 3 ================
+  strcat(buf_crc, "<zone id=\"3\">\r\n");
+  strcat(buf_crc, "<startX>1</startX>\r\n");
+  strcat(buf_crc, "<startY>17</startY>\r\n");
+  strcat(buf_crc, "<size>\r\n");
+  strcat(buf_crc, "<X>74</X>\r\n");
+  strcat(buf_crc, "<Y>16</Y>\r\n");
+  strcat(buf_crc, "</size>\r\n");
+  strcat(buf_crc, "<color>\r\n");
+  ColorWrite(buf_crc, &col_carnum);
+  strcat(buf_crc, "</color>\r\n");
+  strcat(buf_crc, "<bgcolor>\r\n");
+  strcat(buf_crc, "<R>0</R>\r\n");
+  strcat(buf_crc, "<G>0</G>\r\n");
+  strcat(buf_crc, "<B>0</B>\r\n");
+  strcat(buf_crc, "</bgcolor>\r\n");
+  strcat(buf_crc, "<mode>0");
+  strcat(buf_crc, "</mode>\r\n");
+  strcat(buf_crc, "<align>center</align>\r\n");
+  strcat(buf_crc, "<direction>RTL</direction>\r\n");
+  strcat(buf_crc, "<speed>10");
+  strcat(buf_crc, "</speed>\r\n");
+  strcat(buf_crc, "<text>");
+  strcat(buf_crc, "$route");
+  strcat(buf_crc, "</text>\r\n");
+  strcat(buf_crc, "<font>[16=0+14+2]2+medium+condensed+regular.font</font>\r\n");
+  strcat(buf_crc, "</zone>\r\n");
+  strcat(buf_crc, "\r\n");
+  //=======================================
+
+  //=============== ZONE 4 ================
+  strcat(buf_crc, "<zone id=\"4\">\r\n");
+  strcat(buf_crc, "<startX>80</startX>\r\n");
+  strcat(buf_crc, "<startY>17</startY>\r\n");
+  strcat(buf_crc, "<size>\r\n");
+  strcat(buf_crc, "<X>49</X>\r\n");
+  strcat(buf_crc, "<Y>8</Y>\r\n");
+  strcat(buf_crc, "</size>\r\n");
+  strcat(buf_crc, "<color>\r\n");
+  // Date Color Start
+  ColorWrite(buf_crc, &col_date);
+  // Date Color END
+  strcat(buf_crc, "</color>\r\n");
+  strcat(buf_crc, "<bgcolor>\r\n");
+  strcat(buf_crc, "<R>0</R>\r\n");
+  strcat(buf_crc, "<G>0</G>\r\n");
+  strcat(buf_crc, "<B>0</B>\r\n");
+  strcat(buf_crc, "</bgcolor>\r\n");
+  strcat(buf_crc, "<mode>0</mode>\r\n");
+  strcat(buf_crc, "<align>center</align>\r\n");
+  strcat(buf_crc, "<text>$dd $mm1</text>\r\n");
+  strcat(buf_crc, "<font>[8=0+7+1]1+thin+condensed+regular.font</font>\r\n");
+  strcat(buf_crc, "</zone>\r\n");
+  strcat(buf_crc, "\r\n");
+  //=======================================
+
+  //=============== ZONE 5 ================
+  strcat(buf_crc, "<zone id=\"5\">\r\n");
+  strcat(buf_crc, "<startX>80</startX>\r\n");
+  strcat(buf_crc, "<startY>26</startY>\r\n");
+  strcat(buf_crc, "<size>\r\n");
+  strcat(buf_crc, "<X>24</X>\r\n");
+  strcat(buf_crc, "<Y>8</Y>\r\n");
+  strcat(buf_crc, "</size>\r\n");
+  strcat(buf_crc, "<color>\r\n");
+  // TempIN Color Start
+  ColorWrite(buf_crc, &col_tempin);
+  // TempIN Color END
+  strcat(buf_crc, "</color>\r\n");
+  strcat(buf_crc, "<bgcolor>\r\n");
+  strcat(buf_crc, "<R>0</R>\r\n");
+  strcat(buf_crc, "<G>0</G>\r\n");
+  strcat(buf_crc, "<B>0</B>\r\n");
+  strcat(buf_crc, "</bgcolor>\r\n");
+  strcat(buf_crc, "<mode>0</mode>\r\n");
+  strcat(buf_crc, "<align>center</align>\r\n");
+  strcat(buf_crc, "<text>$temp1°C</text>\r\n");
+  strcat(buf_crc, "<font>[8=0+7+1]1+thin+condensed+regular.font</font>\r\n");
+  strcat(buf_crc, "</zone>\r\n");
+  strcat(buf_crc, "\r\n");
+  //=======================================
+
+  //=============== ZONE 5 ================
+  strcat(buf_crc, "<zone id=\"6\">\r\n");
+  strcat(buf_crc, "<startX>105</startX>\r\n");
+  strcat(buf_crc, "<startY>26</startY>\r\n");
+  strcat(buf_crc, "<size>\r\n");
+  strcat(buf_crc, "<X>24</X>\r\n");
+  strcat(buf_crc, "<Y>8</Y>\r\n");
+  strcat(buf_crc, "</size>\r\n");
+  strcat(buf_crc, "<color>\r\n");
+  // TempOUT Color Start
+  ColorWrite(buf_crc, &col_tempout);
+  // TempOUT Color END
+  strcat(buf_crc, "</color>\r\n");
+  strcat(buf_crc, "<bgcolor>\r\n");
+  strcat(buf_crc, "<R>0</R>\r\n");
+  strcat(buf_crc, "<G>0</G>\r\n");
+  strcat(buf_crc, "<B>0</B>\r\n");
+  strcat(buf_crc, "</bgcolor>\r\n");
+  strcat(buf_crc, "<mode>0</mode>\r\n");
+  strcat(buf_crc, "<align>center</align>\r\n");
+  strcat(buf_crc, "<text>$temp2°C</text>\r\n");
+  strcat(buf_crc, "<font>[8=0+7+1]1+thin+condensed+regular.font</font>\r\n");
+  strcat(buf_crc, "</zone>\r\n");
+  strcat(buf_crc, "\r\n");
+  //=======================================
+  strcat(buf_crc, "</adr>\r\n");
+  //========= adress 2 end=================
+  Serial.printf("size BUFF: %d", strlen(buf_crc));
+  crc = CRC16_mb(buf_crc, strlen(buf_crc));
   strcat(xml, "<extboard_data>\r\n");
   strcat(xml, buf_crc);
   strcat(xml, "<extboard_crc>");
@@ -684,6 +866,7 @@ void Send_ITdata(uint8_t adr)
   strcat(xml, "</extboard_data>");
   Serial2.println(xml);
   Serial2.println();
+  Serial.printf("size XML: %d", strlen(xml));
 }
 //=========================================================================
 

@@ -38,7 +38,7 @@
 #define OFF 0
 
 //======================    G P I O        =====================
-#define KBD_PIN 36 // Pin Analog Keyboard
+#define KBD_PIN 36 // Pin Analog Keyboard (NO USED)
 
 #define LED_WiFi 13 // Led State WiFi Connection
 #define LED_ST 12   // Status
@@ -49,15 +49,13 @@
 #define WC1 39 // Pin status control WC 1
 #define WC2 34 // Pin status control WC 2
 
-#define SW1 19 // DIP Switch
-#define SW2 18 // DIP Switch
-
+// Switches 
+#define SW1 18 // DIP Switch 1
+#define SW2 19 // DIP Switch 2
 // I2S
-// #define I2S_DOUT 23
 #define I2S_DOUT 27
 #define I2S_BCLK 26
 #define I2S_LRC 25
-
 // UART 1  - RS485 -
 #define RS_SERIAL1
 #ifdef RS_SERIAL1
@@ -238,6 +236,7 @@ extern color col_speed;
 //=======================================================================
 struct HardwareConfig
 {
+  uint8_t ADR = 0;          // RS_ADR
   int8_t WCL = 0;           // WC_STATE_LOGIQ
   uint8_t WCGS = 0;         // WC_GET_SIGNAL
   uint8_t WCSS = 0;         // WC_SENSOR_SIGNAL

@@ -9,8 +9,8 @@
 //======================================================================
 
 //=========================== GLOBAL VARIABLES =========================
+bool first_start = true;
 uint8_t sec_cnt = 0;
-
 uint8_t menu = 0;     // State menu (levels)
 char name_1[25] = ""; // menu message to show TOP zone
 char name_2[25] = ""; // menu message to show BOT zone
@@ -97,8 +97,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.3.2";
-    CFG.fwdate = "17.07.2024";
+    CFG.fw = "0.3.3";
+    CFG.fwdate = "18.07.2024";
 
     Serial.begin(UARTSpeed);
     // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
@@ -133,15 +133,43 @@ void setup()
     Serial.println(F("Sensor T2...Done"));
     delay(20);
 
-    pinMode(WC1, INPUT_PULLUP);
-    pinMode(WC2, INPUT_PULLUP);
-
     pinMode(LED_ST, OUTPUT);
     digitalWrite(LED_ST, LOW);
     pinMode(LED_WiFi, OUTPUT);
     digitalWrite(LED_WiFi, LOW);
 
-    Serial.println("Starting Analog buttons");
+    pinMode(WC1, INPUT_PULLUP);
+    pinMode(WC2, INPUT_PULLUP);
+
+    pinMode(SW1, INPUT_PULLUP);
+    pinMode(SW2, INPUT_PULLUP);
+
+    if (digitalRead(SW1) && digitalRead(SW2))
+    {
+        HCONF.ADR = 0;
+    }
+    else if (!digitalRead(SW1) && digitalRead(SW2))
+    {
+        HCONF.ADR = 1;
+    }
+    else if (digitalRead(SW1) && !digitalRead(SW2))
+    {
+        HCONF.ADR = 2;
+    }
+    else if (!digitalRead(SW1) && !digitalRead(SW2))
+    {
+        HCONF.ADR = 3;
+    }
+    Serial.printf("SET ADR: %d \r\n", HCONF.ADR);
+
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+    for (uint8_t i = 1; i <= HCONF.ADR; i++)
+    {
+        digitalWrite(LED_ST, HIGH);
+        vTaskDelay(150 / portTICK_PERIOD_MS);
+        digitalWrite(LED_ST, LOW);
+        vTaskDelay(300 / portTICK_PERIOD_MS);
+    }
 
     ColorSet(&col_speed, WHITE);
 
@@ -195,7 +223,7 @@ void setup()
     xTaskCreatePinnedToCore(
         HandlerTask500,
         "TaskCore1_500ms",
-        12000,
+        16384, // 12000
         NULL,
         1,
         &TaskCore1_500ms,
@@ -302,7 +330,6 @@ void HandlerCore1(void *pvParameters)
         Clock = RTC.getTime();
 
         digitalWrite(LED_WiFi, !VD);
-        // ButtonHandler();
 
         DebugInfo();
 
@@ -477,22 +504,22 @@ void SendtoRS485()
         {
             Serial.println("Send IT");
 
-            // digitalWrite(LED_ST, HIGH);
+            digitalWrite(LED_ST, HIGH);
             Send_ITdata(1);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            // digitalWrite(LED_ST, LOW);
-            Send_ITdata(2);
+            // vTaskDelay(1000 / portTICK_PERIOD_MS);
+            digitalWrite(LED_ST, LOW);
+            // Send_ITdata(2);
             // vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
 
         if (!STATE.DUPDBlock)
         {
-            // digitalWrite(LED_ST, HIGH);
+            digitalWrite(LED_ST, HIGH);
             Send_BSdata();
             vTaskDelay(100 / portTICK_PERIOD_MS);
+            digitalWrite(LED_ST, LOW);
             Send_GPSdata();
             vTaskDelay(100 / portTICK_PERIOD_MS);
-            // digitalWrite(LED_ST, LOW);
         }
         sec_cnt = 0;
     }
@@ -520,6 +547,7 @@ void ButtonHandler()
     if (btn1.click())
     {
         Serial.printf(" BTN 1 Click \r\n");
+
         if (menu == IDLE)
         {
             int hour = Clock.hour;
