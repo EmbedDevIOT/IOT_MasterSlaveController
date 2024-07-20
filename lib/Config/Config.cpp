@@ -330,28 +330,27 @@ void SystemFactoryReset()
 /***************************************************************************************/
 void getTimeChar(char *array)
 {
-  // DateTime now = RTC.getTime();
   uint8_t hour = Clock.hour;
-  // if(hour == 0){
-  //   hour = 24;
-  // }
+
   int TimGMT = hour - CFG.gmt;
 
-  Serial.printf("TimGMT1: %d \r\n", TimGMT);
+  // Serial.printf("TimGMT1: %d \r\n", TimGMT);
 
   if (TimGMT < 0)
   {
     TimGMT = hour + (24 - CFG.gmt);
   }
-  else if (TimGMT > 24) 
+  else if (TimGMT > 24)
   {
     TimGMT = TimGMT - 24;
   }
+  else if (TimGMT == 24)
+  {
+    TimGMT = 0;
+  }
 
-  Serial.printf("TimGMT2: %d \r\n", TimGMT);
+  // Serial.printf("TimGMT2: %d \r\n", TimGMT);
 
-  // array[0] = now.hour / 10 + '0';
-  // array[1] = now.hour % 10 + '0';
   array[0] = TimGMT / 10 + '0';
   array[1] = TimGMT % 10 + '0';
   array[2] = Clock.minute / 10 + '0';
@@ -360,21 +359,22 @@ void getTimeChar(char *array)
   array[5] = Clock.second % 10 + '0';
   array[6] = '\0';
 
-  // for (uint8_t i = 0; i < 6; i++)
-  // {
-  //   Serial.print(array[i]);
-  // }
+  for (uint8_t i = 0; i <= 6; i++)
+  {
+    Serial.print(array[i]);
+  }
+  Serial.print("\r\n");
 }
 /**********************************************************************************/
 
 void getDateChar(char *array)
 {
-  DateTime now = RTC.getTime();
+  // DateTime now = RTC.getTime();
 
   int8_t bytes[4];
   byte amount;
   uint16_t year;
-  year = now.year;
+  year = Clock.year;
 
   for (byte i = 0; i < 4; i++)
   {                       //>
@@ -387,10 +387,14 @@ void getDateChar(char *array)
     }
   } // массив bytes хранит цифры числа data в обратном порядке!
 
-  array[0] = now.date / 10 + '0';
-  array[1] = now.date % 10 + '0';
-  array[2] = now.month / 10 + '0';
-  array[3] = now.month % 10 + '0';
+  // array[0] = now.date / 10 + '0';
+  // array[1] = now.date % 10 + '0';
+  // array[2] = now.month / 10 + '0';
+  // array[3] = now.month % 10 + '0';
+  array[0] = Clock.date / 10 + '0';
+  array[1] = Clock.date % 10 + '0';
+  array[2] = Clock.month / 10 + '0';
+  array[3] = Clock.month % 10 + '0';
   array[4] = (char)bytes[1] + '0';
   array[5] = (char)bytes[0] + '0';
   array[6] = '\0';
@@ -864,7 +868,7 @@ void Send_ITdata(uint8_t adr)
   //=======================================
   strcat(buf_crc, "</adr>\r\n");
   //========= adress 2 end=================
-  Serial.printf("size BUFF: %d", strlen(buf_crc));
+  // Serial.printf("size BUFF: %d", strlen(buf_crc));
   crc = CRC16_mb(buf_crc, strlen(buf_crc));
   strcat(xml, "<extboard_data>\r\n");
   strcat(xml, buf_crc);
@@ -878,7 +882,7 @@ void Send_ITdata(uint8_t adr)
   strcat(xml, "</extboard_data>");
   Serial2.println(xml);
   Serial2.println();
-  Serial.printf("size XML: %d", strlen(xml));
+  // Serial.printf("size XML: %d", strlen(xml));
 }
 //=========================================================================
 

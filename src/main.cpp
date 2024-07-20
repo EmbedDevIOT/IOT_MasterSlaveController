@@ -100,7 +100,7 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.3.5";
+    CFG.fw = "0.3.6";
     CFG.fwdate = "20.07.2024";
 
     Serial.begin(UARTSpeed);
@@ -340,8 +340,6 @@ void HandlerTask1Wire(void *pvParameters)
 
                 if ((STATE.WiFiEnable) && (sec % 2 == 0))
                 {
-                    // Serial.printf("LED ON sec: %d \r\n", sec);
-
                     digitalWrite(LED_WiFi, HIGH);
                     vTaskDelay(100 / portTICK_PERIOD_MS);
                     digitalWrite(LED_WiFi, LOW);
@@ -368,7 +366,7 @@ void HandlerCore1(void *pvParameters)
         if (HCONF.ADR == 1)
         {
             Clock = RTC.getTime();
-            // DebugInfo();
+            DebugInfo();
             if (menu != IDLE)
                 STATE.menu_tmr++;
         }
@@ -392,10 +390,11 @@ void HandlerTask500(void *pvParameters)
         if (HCONF.ADR == 1)
         {
             sec_cnt++;
+            // Перенести
             STATE.SensWC1 = GetWCState(WC1);
             STATE.SensWC2 = GetWCState(WC2);
             SetColorWC();
-
+            // Перенести
             SendtoRS485();
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -619,7 +618,7 @@ void ButtonHandler()
             case _CAR_NUM:
                 UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
                 Serial.printf("CARNUM: %d \r\n", UserText.carnum);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", UserText.carnum);
                 Send_BS_UserData(name_1, name_2);
                 SaveConfig();
@@ -629,7 +628,7 @@ void ButtonHandler()
                 if (CFG.gmt > -12 && CFG.gmt <= 12)
                 {
                     CFG.gmt--;
-                    memset(name_2, 0, 15);
+                    memset(name_2, 0, 25);
                     if (CFG.gmt > 0)
                     {
                         sprintf(name_2, "+%d", CFG.gmt);
@@ -650,7 +649,7 @@ void ButtonHandler()
                 Clock.minute = min;
                 Serial.printf("MIN: %d \r\n", min);
                 RTC.setTime(Clock);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", min);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -665,7 +664,7 @@ void ButtonHandler()
                 Clock.hour = hour;
                 RTC.setTime(Clock);
                 Serial.printf("Hour: %d \n\r", Clock.hour);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", hour);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -684,7 +683,7 @@ void ButtonHandler()
                 Clock.date = data;
                 RTC.setTime(Clock);
                 Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", Clock.date);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -701,7 +700,7 @@ void ButtonHandler()
                 Clock.month = month;
                 RTC.setTime(Clock);
                 Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", month);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -715,7 +714,7 @@ void ButtonHandler()
                 Clock.year = year;
                 RTC.setTime(Clock);
                 Serial.printf("Year: %d\r\n ", Clock.year);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", Clock.year);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -728,7 +727,7 @@ void ButtonHandler()
                     HCONF.bright -= 10;
 
                 Serial.printf("Bright: %d\r\n ", HCONF.bright);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", HCONF.bright);
                 Send_BS_UserData(name_1, name_2);
                 break;
@@ -737,7 +736,7 @@ void ButtonHandler()
                 (HCONF.WCL > 0 && HCONF.WCL <= 2) ? HCONF.WCL -= 1 : HCONF.WCL = 2;
                 Serial.printf("WCL: %d\r\n ", HCONF.WCL);
 
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
 
                 switch (HCONF.WCL)
                 {
@@ -779,7 +778,7 @@ void ButtonHandler()
                 {
                     STATE.WiFiEnable = false;
                     Serial.println("WiFi_Disable");
-                    memset(name_2, 0, 15);
+                    memset(name_2, 0, 25);
                     sprintf(name_2, "ОТКЛ");
                     Send_BS_UserData(name_1, name_2);
                     WiFi.disconnect(true);
@@ -789,7 +788,7 @@ void ButtonHandler()
                 {
                     STATE.WiFiEnable = true;
                     Serial.println("WiFi_Enable");
-                    memset(name_2, 0, 15);
+                    memset(name_2, 0, 25);
                     sprintf(name_2, "ВКЛ");
                     Send_BS_UserData(name_1, name_2);
                     WIFIinit(AccessPoint);
@@ -853,6 +852,7 @@ void ButtonHandler()
                 memset(name_2, 0, 25);
                 strcat(name_1, "Минута:");
                 sprintf(name_2, "%02d", Clock.minute);
+                Serial.printf("Minute: %c \r\n", name_2);
                 Send_BS_UserData(name_1, name_2);
                 break;
             // Hour --
@@ -862,6 +862,7 @@ void ButtonHandler()
                 memset(name_2, 0, 25);
                 strcat(name_1, "Час:");
                 sprintf(name_2, "%02d", Clock.hour);
+                Serial.printf("Час: %c\r\n", name_2);
                 Send_BS_UserData(name_1, name_2);
                 break;
             // Day --
@@ -1050,7 +1051,7 @@ void ButtonHandler()
                 if (CFG.gmt >= -12 && CFG.gmt < 12)
                 {
                     CFG.gmt++;
-                    memset(name_2, 0, 15);
+                    memset(name_2, 0, 25);
                     if (CFG.gmt > 0)
                     {
                         sprintf(name_2, "+%d", CFG.gmt);
@@ -1071,8 +1072,9 @@ void ButtonHandler()
                 Clock.minute = min;
                 Serial.printf("MIN: %d \r\n", min);
                 RTC.setTime(Clock);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", min);
+                Serial.printf("Minute: %c\r\n", name_2);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Send_GPSdata();
@@ -1085,8 +1087,9 @@ void ButtonHandler()
                     hour = 0;
                 Clock.hour = hour;
                 RTC.setTime(Clock);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", hour);
+                Serial.printf("HOUR: %c\r\n", name_2);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Serial.printf("Hour: %d \n\r", Clock.hour);
@@ -1105,7 +1108,7 @@ void ButtonHandler()
                 Clock.date = data;
                 RTC.setTime(Clock);
                 Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", Clock.date);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -1122,7 +1125,7 @@ void ButtonHandler()
                 Clock.month = month;
                 RTC.setTime(Clock);
                 Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", month);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -1138,7 +1141,7 @@ void ButtonHandler()
                 Clock.year = year;
                 RTC.setTime(Clock);
                 Serial.printf("Year: %d\r\n", Clock.year);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", Clock.year);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -1152,7 +1155,7 @@ void ButtonHandler()
                     HCONF.bright += 10;
                 }
                 Serial.printf("Bright: %d\r\n ", HCONF.bright);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 sprintf(name_2, "%d", HCONF.bright);
                 Send_BS_UserData(name_1, name_2);
                 break;
@@ -1161,7 +1164,7 @@ void ButtonHandler()
             case _WCL:
                 (HCONF.WCL >= 0 && HCONF.WCL < 2) ? HCONF.WCL += 1 : HCONF.WCL = 0;
                 Serial.printf("WCL: %d\r\n ", HCONF.WCL);
-                memset(name_2, 0, 15);
+                memset(name_2, 0, 25);
                 switch (HCONF.WCL)
                 {
                 case NORMAL:
@@ -1204,7 +1207,7 @@ void ButtonHandler()
                 {
                     STATE.WiFiEnable = false;
                     Serial.println("WiFi_Disable");
-                    memset(name_2, 0, 15);
+                    memset(name_2, 0, 25);
                     sprintf(name_2, "ОТКЛ");
                     Send_BS_UserData(name_1, name_2);
                     WiFi.disconnect(true);
@@ -1214,7 +1217,7 @@ void ButtonHandler()
                 {
                     STATE.WiFiEnable = true;
                     Serial.println("WiFi_Enable");
-                    memset(name_2, 0, 15);
+                    memset(name_2, 0, 25);
                     sprintf(name_2, "ВКЛ");
                     Send_BS_UserData(name_1, name_2);
                     WIFIinit(AccessPoint);
