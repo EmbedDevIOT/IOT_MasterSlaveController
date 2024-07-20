@@ -9,7 +9,10 @@
 //======================================================================
 
 //=========================== GLOBAL VARIABLES =========================
-bool first_start = true;
+bool WiFiVD = true;
+
+uint8_t sec = 0;
+
 uint8_t sec_cnt = 0;
 uint8_t menu = 0;     // State menu (levels)
 char name_1[25] = ""; // menu message to show TOP zone
@@ -97,42 +100,14 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.3.3";
-    CFG.fwdate = "18.07.2024";
+    CFG.fw = "0.3.5";
+    CFG.fwdate = "20.07.2024";
 
     Serial.begin(UARTSpeed);
-    // Serial1.begin(115200,SERIAL_8N1,RX1_PIN, TX1_PIN);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
     SystemInit();
 
-    // SPIFFS INIT
-    if (!SPIFFS.begin(true))
-    {
-        Serial.println("An Error has occurred while mounting SPIFFS");
-        return;
-    }
-
-    // RTC INIT
-    RTC.begin();
-    if (RTC.lostPower())
-    {
-        RTC.setTime(COMPILE_TIME);
-    }
-    Clock = RTC.getTime();
-    Serial.println(F("RTC...Done"));
-
-    // I2C_Scanning();
-    // vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    I2CExpanderInit(); // Init i2C expander
-
-    ds18b20_1.begin();
-    Serial.println(F("Sensor T1...Done"));
-    delay(20);
-    ds18b20_2.begin();
-    Serial.println(F("Sensor T2...Done"));
-    delay(20);
-
+    // GPIO init
     pinMode(LED_ST, OUTPUT);
     digitalWrite(LED_ST, LOW);
     pinMode(LED_WiFi, OUTPUT);
@@ -144,6 +119,7 @@ void setup()
     pinMode(SW1, INPUT_PULLUP);
     pinMode(SW2, INPUT_PULLUP);
 
+    // RS 485 ADR SET
     if (digitalRead(SW1) && digitalRead(SW2))
     {
         HCONF.ADR = 0;
@@ -160,7 +136,7 @@ void setup()
     {
         HCONF.ADR = 3;
     }
-    Serial.printf("SET ADR: %d \r\n", HCONF.ADR);
+    Serial.printf("RS485 ADR: %d \r\n", HCONF.ADR);
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
     for (uint8_t i = 1; i <= HCONF.ADR; i++)
@@ -171,12 +147,41 @@ void setup()
         vTaskDelay(300 / portTICK_PERIOD_MS);
     }
 
+    // SPIFFS INIT
+    if (!SPIFFS.begin(true))
+    {
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        return;
+    }
+    // ADR = 1
+    if (HCONF.ADR == 1)
+    {
+        // RTC INIT
+        RTC.begin();
+        if (RTC.lostPower())
+        {
+            RTC.setTime(COMPILE_TIME);
+        }
+        Clock = RTC.getTime();
+        Serial.println(F("RTC...Done"));
+
+        ds18b20_1.begin();
+        Serial.println(F("Sensor T1...Done"));
+        delay(20);
+        ds18b20_2.begin();
+        Serial.println(F("Sensor T2...Done"));
+        delay(20);
+    }
+
+    // I2C_Scanning();
+    // vTaskDelay(2000 / portTICK_PERIOD_MS);
+
     ColorSet(&col_speed, WHITE);
 
     LoadConfig();         // Load configuration from config.json files
     ShowLoadJSONConfig(); // Show load configuration
 
-    if (STATE.WiFiEnable)
+    if ((HCONF.ADR == 1) && (STATE.WiFiEnable))
     {
         Serial.println("Wifi Enable");
         WIFIinit();
@@ -190,6 +195,7 @@ void setup()
     Amplifier.setVolume(HCONF.volume);
     Serial.println(F("DAC PCM Amplifier...Done"));
 
+    // Task: I2S Audio Handler | MenuTimer Exit
     xTaskCreatePinnedToCore(
         HandlerCore0,
         "TaskCore0_Gen",
@@ -200,26 +206,35 @@ void setup()
         0);
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    xTaskCreatePinnedToCore(
-        HandlerTask1Wire,
-        "TaskCore0_TSH",
-        2048,
-        NULL,
-        1,
-        &TaskCore0_TSH,
-        0);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    // Temperature Sensor Task Handler
+    if (HCONF.ADR == 1)
+    {
+        xTaskCreatePinnedToCore(
+            HandlerTask1Wire,
+            "TaskCore0_TSH",
+            2048,
+            NULL,
+            1,
+            &TaskCore0_TSH,
+            0);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
 
-    xTaskCreatePinnedToCore(
-        HandlerCore1,
-        "TaskCore1_Gen",
-        2048, // ?
-        NULL,
-        1,
-        &TaskCore1_Gen,
-        1);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    // Core 1. 1000ms (Read RTC / Debug Info / menu timer)
+    if (HCONF.ADR == 1)
+    {
+        xTaskCreatePinnedToCore(
+            HandlerCore1,
+            "TaskCore1_Gen",
+            2048,
+            NULL,
+            1,
+            &TaskCore1_Gen,
+            1);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
 
+    // Sending RS485 data
     xTaskCreatePinnedToCore(
         HandlerTask500,
         "TaskCore1_500ms",
@@ -235,7 +250,8 @@ void setup()
 //=======================        L O O P        =========================
 void loop()
 {
-    if (STATE.WiFiEnable)
+    // HTTP Handling (RSADR = 1 and WiFi = ON)
+    if ((HCONF.ADR == 1) && (STATE.WiFiEnable))
     {
         HandleClient();
     }
@@ -244,17 +260,18 @@ void loop()
 //=======================================================================
 
 //======================    R T O S  T A S K    =========================
-// Core 0. Network Stack Handler
+// Core 0. 10ms (I2S Audio Handler | MenuTimer_Exit
 void HandlerCore0(void *pvParameters)
 {
-    Serial.print("Task:0 T:10ms Stack:10000 Core:");
+    Serial.print("Task: I2S Handler | MenuTimer Exit \r\n");
+    Serial.print("T:10ms Stack:10000 Core:");
     Serial.println(xPortGetCoreID());
     for (;;)
     {
         // UART_Recieve_Data();
         Amplifier.loop();
         // Exit menu (20 sec timer)
-        if (STATE.menu_tmr == 20)
+        if ((HCONF.ADR == 1) && (STATE.menu_tmr == 20))
         {
             menu = IDLE;
             STATE.menu_tmr = 0;
@@ -308,52 +325,79 @@ void HandlerCore0(void *pvParameters)
 // Core 0. Temperature Sensor Handler
 void HandlerTask1Wire(void *pvParameters)
 {
-    Serial.print("Task: TSH T:10s Stack:2048 Core:");
+    Serial.print("Task: Temperature Sensor Handler \r\n");
+    Serial.print("T:10s Stack:2048 Core:");
     Serial.println(xPortGetCoreID());
     for (;;)
     {
-        GetDSData();
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        // Serial.printf("sec: %d \r\n", sec);
+
+        if (HCONF.ADR == 1)
+        {
+            if (sec < 10)
+            {
+                sec++;
+
+                if ((STATE.WiFiEnable) && (sec % 2 == 0))
+                {
+                    // Serial.printf("LED ON sec: %d \r\n", sec);
+
+                    digitalWrite(LED_WiFi, HIGH);
+                    vTaskDelay(100 / portTICK_PERIOD_MS);
+                    digitalWrite(LED_WiFi, LOW);
+                }
+            }
+            else
+            {
+                GetDSData();
+                sec = 1;
+            }
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
     }
 }
 
-// Core 1. 1000ms
+// Core 1. 1000ms (Read RTC / Debug Info / menu timer)
 void HandlerCore1(void *pvParameters)
 {
-    Serial.print("Task:1 T:1000ms Stack:2048 Core:");
+    Serial.print("Task: Read RTC / Debug Info / menu timer \r\n");
+    Serial.print("T:1000ms Stack:2048 Core:");
     Serial.println(xPortGetCoreID());
     for (;;)
     {
-        static bool VD = true;
-        VD = !VD;
+        if (HCONF.ADR == 1)
+        {
+            Clock = RTC.getTime();
+            // DebugInfo();
+            if (menu != IDLE)
+                STATE.menu_tmr++;
+        }
 
-        Clock = RTC.getTime();
-
-        digitalWrite(LED_WiFi, !VD);
-
-        DebugInfo();
-
-        if (menu != IDLE)
-            STATE.menu_tmr++;
-
-        Serial.printf("Menu | Level: %d | Timer: %d \r\n", menu, STATE.menu_tmr);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
-// Core 1. 500ms
+// Core 1. 1000ms
 void HandlerTask500(void *pvParameters)
 {
-    Serial.print("Task:3 T:500ms Stack:12000 Core:");
+    Serial2.print("\r\n\r\n"); // Костыль инита RS485
+
+    Serial.print("Task: Sending RS485 data \r\n");
+    Serial.print("T:1000ms Stack:12000 Core:");
     Serial.println(xPortGetCoreID());
+
     for (;;)
     {
-        sec_cnt++;
 
-        STATE.SensWC1 = GetWCState(WC1);
-        STATE.SensWC2 = GetWCState(WC2);
-        SetColorWC();
-        SendtoRS485();
+        if (HCONF.ADR == 1)
+        {
+            sec_cnt++;
+            STATE.SensWC1 = GetWCState(WC1);
+            STATE.SensWC2 = GetWCState(WC2);
+            SetColorWC();
+
+            SendtoRS485();
+        }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -506,10 +550,7 @@ void SendtoRS485()
 
             digitalWrite(LED_ST, HIGH);
             Send_ITdata(1);
-            // vTaskDelay(1000 / portTICK_PERIOD_MS);
             digitalWrite(LED_ST, LOW);
-            // Send_ITdata(2);
-            // vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
 
         if (!STATE.DUPDBlock)
@@ -525,719 +566,709 @@ void SendtoRS485()
     }
 }
 //=========================================================================
-
 //=========================================================================
 //=================== Keyboard buttons Handler =============================
 void ButtonHandler()
 {
-    btn1.tick();
-    btn2.tick();
-    btn3.tick();
-    btn4.tick();
-    btn5.tick();
-
-    // Holding Button 1 Handling (+)
-    if (btn1.getSteps() == 50)
+    switch (HCONF.ADR)
     {
-        Serial.printf(" BTN 1 STEP 50 \r\n");
-        btn1.clear();
-    }
-
-    // Click Button 1 Handling (+)
-    if (btn1.click())
-    {
-        Serial.printf(" BTN 1 Click \r\n");
-
-        if (menu == IDLE)
+    case 1:
+        btn1.tick();
+        btn2.tick();
+        btn3.tick();
+        btn4.tick();
+        btn5.tick();
+        // Click Button 1 Handling (+)
+        if (btn1.click())
         {
-            int hour = Clock.hour;
-            hour++;
-            if (hour > 23)
-                hour = 0;
-            Clock.hour = hour;
-            RTC.setTime(Clock);
-            Serial.printf("Hour: %d \n\r", Clock.hour);
-            Send_GPSdata();
+            Serial.printf(" BTN 1 Click \r\n");
+
+            if (menu == IDLE)
+            {
+                int hour = Clock.hour;
+                hour++;
+                if (hour > 23)
+                    hour = 0;
+                Clock.hour = hour;
+                RTC.setTime(Clock);
+                Serial.printf("Hour: %d \n\r", Clock.hour);
+                Send_GPSdata();
+            }
         }
 
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
-
-    // Click Button 2 Handling (-)
-    if (btn2.click())
-    {
-        Serial.printf(" BTN 2 Click \r\n");
-        int min, hour, data, month, year;
-
-        STATE.menu_tmr = 0; // timer menu reset
-        switch (menu)
+        // Click Button 2 Handling (-)
+        if (btn2.click())
         {
-        case IDLE:
-            // CarNUM (--) to IDLE state (no change TOP zone)
-            if (!UserText.hide_t)
+            Serial.printf(" BTN 2 Click \r\n");
+            int min, hour, data, month, year;
+
+            STATE.menu_tmr = 0; // timer menu reset
+            switch (menu)
             {
+            case IDLE:
+                // CarNUM (--) to IDLE state (no change TOP zone)
+                if (!UserText.hide_t)
+                {
+                    UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
+                    Serial.printf("CARNUM: %d \r\n", UserText.carnum);
+                    SaveConfig();
+                    Send_BSdata();
+                }
+                break;
+            // CarNUM (--) to General MENU  (change TOP zone)
+            case _CAR_NUM:
                 UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
                 Serial.printf("CARNUM: %d \r\n", UserText.carnum);
-                SaveConfig();
-                Send_BSdata();
-            }
-            break;
-        // CarNUM (--) to General MENU  (change TOP zone)
-        case _CAR_NUM:
-            UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
-            Serial.printf("CARNUM: %d \r\n", UserText.carnum);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", UserText.carnum);
-            Send_BS_UserData(name_1, name_2);
-            SaveConfig();
-            break;
-        // GMT --
-        case _GMT:
-            if (CFG.gmt > -12 && CFG.gmt <= 12)
-            {
-                CFG.gmt--;
                 memset(name_2, 0, 15);
-                if (CFG.gmt > 0)
+                sprintf(name_2, "%d", UserText.carnum);
+                Send_BS_UserData(name_1, name_2);
+                SaveConfig();
+                break;
+            // GMT --
+            case _GMT:
+                if (CFG.gmt > -12 && CFG.gmt <= 12)
                 {
-                    sprintf(name_2, "+%d", CFG.gmt);
+                    CFG.gmt--;
+                    memset(name_2, 0, 15);
+                    if (CFG.gmt > 0)
+                    {
+                        sprintf(name_2, "+%d", CFG.gmt);
+                    }
+                    else
+                        sprintf(name_2, "%d", CFG.gmt);
+                    Send_BS_UserData(name_1, name_2);
+                }
+                SaveConfig();
+                Serial.printf("GMT: %d \r\n", CFG.gmt);
+                break;
+            // MIN --
+            case _MIN:
+                min = Clock.minute;
+                min--;
+                if (min < 0)
+                    min = 59;
+                Clock.minute = min;
+                Serial.printf("MIN: %d \r\n", min);
+                RTC.setTime(Clock);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", min);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // Hour --
+            case _HOUR:
+                hour = Clock.hour;
+                hour--;
+                if (hour < 0)
+                    hour = 23;
+                Clock.hour = hour;
+                RTC.setTime(Clock);
+                Serial.printf("Hour: %d \n\r", Clock.hour);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", hour);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // Day --
+            case _DAY:
+                data = Clock.date;
+                month = Clock.month;
+                data--;
+                data = constrain(data, 0, DS_dim(month - 1));
+
+                if (data < 1)
+                    data = DS_dim(month - 1);
+
+                Clock.date = data;
+                RTC.setTime(Clock);
+                Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", Clock.date);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // MONTH --
+            case _MONTH:
+                month = Clock.month;
+                month--;
+                if (month < 1)
+                {
+                    month = 12;
+                }
+                Clock.month = month;
+                RTC.setTime(Clock);
+                Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", month);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // Year --
+            case _YEAR:
+                year = Clock.year;
+                if (year > 2000 && year <= 2099)
+                    year--;
+                Clock.year = year;
+                RTC.setTime(Clock);
+                Serial.printf("Year: %d\r\n ", Clock.year);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", Clock.year);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // Brightness --
+            case _BRIGHT:
+
+                if (HCONF.bright > 10 && HCONF.bright <= 100)
+                    HCONF.bright -= 10;
+
+                Serial.printf("Bright: %d\r\n ", HCONF.bright);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", HCONF.bright);
+                Send_BS_UserData(name_1, name_2);
+                break;
+            // WC Signal State Logiq
+            case _WCL:
+                (HCONF.WCL > 0 && HCONF.WCL <= 2) ? HCONF.WCL -= 1 : HCONF.WCL = 2;
+                Serial.printf("WCL: %d\r\n ", HCONF.WCL);
+
+                memset(name_2, 0, 15);
+
+                switch (HCONF.WCL)
+                {
+                case NORMAL:
+                    sprintf(name_2, "Нормальн");
+                    break;
+                case REVERSE:
+                    sprintf(name_2, "Реверс");
+                    break;
+                case ONE_HALL:
+                    sprintf(name_2, "1 Тамбур");
+                    break;
+                default:
+                    break;
+                }
+                SaveConfig();
+                Send_BS_UserData(name_1, name_2);
+                break;
+
+            // WC Signal sensor state Preset
+            case _WCSS:
+                memset(name_2, 0, 25);
+                if (HCONF.WCSS == SENSOR_OPEN)
+                {
+                    HCONF.WCSS = SENSOR_CLOSE;
+                    sprintf(name_2, "Замкнут");
                 }
                 else
-                    sprintf(name_2, "%d", CFG.gmt);
+                {
+                    HCONF.WCSS = SENSOR_OPEN;
+                    sprintf(name_2, "Разомкнут");
+                }
+                SaveConfig();
                 Send_BS_UserData(name_1, name_2);
-            }
-            SaveConfig();
-            Serial.printf("GMT: %d \r\n", CFG.gmt);
-            break;
-        // MIN --
-        case _MIN:
-            min = Clock.minute;
-            min--;
-            if (min < 0)
-                min = 59;
-            Clock.minute = min;
-            Serial.printf("MIN: %d \r\n", min);
-            RTC.setTime(Clock);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", min);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // Hour --
-        case _HOUR:
-            hour = Clock.hour;
-            hour--;
-            if (hour < 0)
-                hour = 23;
-            Clock.hour = hour;
-            RTC.setTime(Clock);
-            Serial.printf("Hour: %d \n\r", Clock.hour);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", hour);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // Day --
-        case _DAY:
-            data = Clock.date;
-            month = Clock.month;
-            data--;
-            data = constrain(data, 0, DS_dim(month - 1));
-
-            if (data < 1)
-                data = DS_dim(month - 1);
-
-            Clock.date = data;
-            RTC.setTime(Clock);
-            Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", Clock.date);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // MONTH --
-        case _MONTH:
-            month = Clock.month;
-            month--;
-            if (month < 1)
-            {
-                month = 12;
-            }
-            Clock.month = month;
-            RTC.setTime(Clock);
-            Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", month);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // Year --
-        case _YEAR:
-            year = Clock.year;
-            if (year > 2000 && year <= 2099)
-                year--;
-            Clock.year = year;
-            RTC.setTime(Clock);
-            Serial.printf("Year: %d\r\n ", Clock.year);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", Clock.year);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // Brightness --
-        case _BRIGHT:
-
-            if (HCONF.bright > 10 && HCONF.bright <= 100)
-                HCONF.bright -= 10;
-
-            Serial.printf("Bright: %d\r\n ", HCONF.bright);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", HCONF.bright);
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // WC Signal State Logiq
-        case _WCL:
-            (HCONF.WCL > 0 && HCONF.WCL <= 2) ? HCONF.WCL -= 1 : HCONF.WCL = 2;
-            Serial.printf("WCL: %d\r\n ", HCONF.WCL);
-
-            memset(name_2, 0, 15);
-
-            switch (HCONF.WCL)
-            {
-            case NORMAL:
-                sprintf(name_2, "Нормальн");
                 break;
-            case REVERSE:
-                sprintf(name_2, "Реверс");
-                break;
-            case ONE_HALL:
-                sprintf(name_2, "1 Тамбур");
+            // WiFI ON / OFF
+            case _WiFi:
+                if (STATE.WiFiEnable)
+                {
+                    STATE.WiFiEnable = false;
+                    Serial.println("WiFi_Disable");
+                    memset(name_2, 0, 15);
+                    sprintf(name_2, "ОТКЛ");
+                    Send_BS_UserData(name_1, name_2);
+                    WiFi.disconnect(true);
+                    WiFi.mode(WIFI_OFF);
+                }
+                else
+                {
+                    STATE.WiFiEnable = true;
+                    Serial.println("WiFi_Enable");
+                    memset(name_2, 0, 15);
+                    sprintf(name_2, "ВКЛ");
+                    Send_BS_UserData(name_1, name_2);
+                    WIFIinit(AccessPoint);
+                    vTaskDelay(500 / portTICK_PERIOD_MS);
+                    HTTPinit(); // HTTP server initialisation
+                }
+                SaveConfig();
                 break;
             default:
                 break;
             }
-            SaveConfig();
-            Send_BS_UserData(name_1, name_2);
-            break;
+        }
 
-        // WC Signal sensor state Preset
-        case _WCSS:
-            memset(name_2, 0, 25);
-            if (HCONF.WCSS == SENSOR_OPEN)
+        // Click Button 3 Handling (Check and Select level menu)
+        if (btn3.click())
+        {
+            Serial.printf(" BTN 3 Click \r\n");
+            STATE.menu_tmr = 0; // timer menu reset
+            menu += 1;
+
+            if (menu <= 11)
             {
-                HCONF.WCSS = SENSOR_CLOSE;
-                sprintf(name_2, "Замкнут");
+                STATE.DUPDBlock = true;
             }
             else
             {
-                HCONF.WCSS = SENSOR_OPEN;
-                sprintf(name_2, "Разомкнут");
+                menu = IDLE;
+                STATE.DUPDBlock = false;
             }
-            SaveConfig();
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // WiFI ON / OFF
-        case _WiFi:
-            if (STATE.WiFiEnable)
-            {
-                STATE.WiFiEnable = false;
-                Serial.println("WiFi_Disable");
-                memset(name_2, 0, 15);
-                sprintf(name_2, "ОТКЛ");
-                Send_BS_UserData(name_1, name_2);
-                WiFi.disconnect(true);
-                WiFi.mode(WIFI_OFF);
-            }
-            else
-            {
-                STATE.WiFiEnable = true;
-                Serial.println("WiFi_Enable");
-                memset(name_2, 0, 15);
-                sprintf(name_2, "ВКЛ");
-                Send_BS_UserData(name_1, name_2);
-                WIFIinit(AccessPoint);
-                vTaskDelay(500 / portTICK_PERIOD_MS);
-                HTTPinit(); // HTTP server initialisation
-            }
-            SaveConfig();
-            break;
-        default:
-            break;
-        }
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
 
-    // Click Button 3 Handling (Check and Select level menu)
-    if (btn3.click())
-    {
-        Serial.printf(" BTN 3 Click \r\n");
-        STATE.menu_tmr = 0; // timer menu reset
-        menu += 1;
-
-        if (menu <= 11)
-        {
-            STATE.DUPDBlock = true;
-        }
-        else
-        {
-            menu = IDLE;
-            STATE.DUPDBlock = false;
-        }
-
-        switch (menu)
-        {
-        // CarNUM (--) to General MENU  (change TOP zone)
-        case _CAR_NUM:
-            Serial.printf("CARNUM:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "Вагон:");
-            sprintf(name_2, "%d", UserText.carnum);
-            Send_BS_UserData(name_1, name_2);
-            break;
-            // Min --
-        case _GMT:
-            Serial.printf("GMT:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "Час.пояс:");
-            if (CFG.gmt > 0)
+            switch (menu)
             {
-                sprintf(name_2, "+%d", CFG.gmt);
-            }
-            else
-            {
-                sprintf(name_2, "%d", CFG.gmt);
-            }
-            Send_BS_UserData(name_1, name_2);
-            break;
-        case _MIN:
-            Serial.printf("Minute:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "Минута:");
-            sprintf(name_2, "%02d", Clock.minute);
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // Hour --
-        case _HOUR:
-            Serial.printf("Hour:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "Час:");
-            sprintf(name_2, "%02d", Clock.hour);
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // Day --
-        case _DAY:
-            Serial.printf("Day:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "День:");
-            sprintf(name_2, "%d", Clock.date);
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // MONTH --
-        case _MONTH:
-            Serial.printf("Month:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "Месяц:");
-            sprintf(name_2, "%d", Clock.month);
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // Year --
-        case _YEAR:
-            Serial.printf("Year:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "Год:");
-            sprintf(name_2, "%d", Clock.year);
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // Brightness --
-        case _BRIGHT:
-            old_bright = HCONF.bright;
-            Serial.printf("Brightness:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "Яркость:");
-            sprintf(name_2, "%02d", HCONF.bright);
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // WC Signal State Logiq
-        case _WCL:
-            // Saving if NEW_BRIGHT != OLD
-            if (old_bright != HCONF.bright)
-            {
-                SaveConfig();
-                Serial.printf("Saving Brightness:\r\n");
+            // CarNUM (--) to General MENU  (change TOP zone)
+            case _CAR_NUM:
+                Serial.printf("CARNUM:\r\n");
                 memset(name_1, 0, 25);
                 memset(name_2, 0, 25);
-                strcat(name_1, "Ожидайте");
-                strcat(name_2, "...");
+                strcat(name_1, "Вагон:");
+                sprintf(name_2, "%d", UserText.carnum);
                 Send_BS_UserData(name_1, name_2);
-
-                vTaskDelay(1000 / portTICK_PERIOD_MS);
-                STATE.StaticUPD = true;
-                vTaskDelay(4000 / portTICK_PERIOD_MS);
-            }
-
-            Serial.printf("WC Signal Logiq:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "РасполWC");
-            if (HCONF.WCL == NORMAL)
-            {
-                sprintf(name_2, "Нормальн");
-            }
-            else if (HCONF.WCL == REVERSE)
-            {
-                sprintf(name_2, "Реверс");
-            }
-            else if (HCONF.WCL == ONE_HALL)
-            {
-                sprintf(name_2, "1 Тамбур");
-            }
-            Send_BS_UserData(name_1, name_2);
-            break;
-
-        // WC Signal sensor state Preset
-        case _WCSS:
-            Serial.printf("WC Signal sensor preset:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "СигналWC");
-            if (HCONF.WCSS == SENSOR_OPEN)
-            {
-                sprintf(name_2, "Разомкнут");
-            }
-            else
-            {
-                sprintf(name_2, "Замкнут");
-            }
-            Send_BS_UserData(name_1, name_2);
-            break;
-        // WiFI ON / OFF
-        case _WiFi:
-            Serial.printf("WiFI Conrol:\r\n");
-            memset(name_1, 0, 25);
-            memset(name_2, 0, 25);
-            strcat(name_1, "WiFi:");
-            if (STATE.WiFiEnable)
-            {
-                sprintf(name_2, "ВКЛ");
-            }
-            else
-                sprintf(name_2, "ОТКЛ");
-            Send_BS_UserData(name_1, name_2);
-            break;
-        default:
-            break;
-        }
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
-
-    // Holding Button 3 Handling (+)
-    if (btn3.getSteps() == 50)
-    {
-        Serial.printf(" BTN 3 STEP 50 \r\n");
-        // if (menu == IDLE)
-        // {
-        uint32_t now;
-        uint8_t cnt = 3;
-
-        memset(name_1, 0, 25);
-        memset(name_2, 0, 25);
-
-        STATE.DUPDBlock = true;
-        strcat(name_1, "Cброс");
-        itoa(cnt, name_2 + strlen(name_2), DEC);
-        Send_BS_UserData(name_1, name_2);
-
-        now = millis();
-        while (millis() - now < 3500)
-        {
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            if (cnt != 0)
-            {
-                cnt--;
+                break;
+                // Min --
+            case _GMT:
+                Serial.printf("GMT:\r\n");
+                memset(name_1, 0, 25);
                 memset(name_2, 0, 25);
-                itoa(cnt, name_2 + strlen(name_2), DEC);
-                Send_BS_UserData(name_1, name_2);
-            }
-        }
-        Serial.println("#### FACTORY RESET ####");
-        memset(name_1, 0, 25);
-        memset(name_2, 0, 25);
-        strcat(name_1, "Сброшено");
-        Send_BS_UserData(name_1, name_2);
-        SystemFactoryReset();
-        SaveConfig();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        Serial.println("#### SAVE DONE ####");
-        ESP.restart();
-        // }
-        btn3.clear();
-    }
-
-    // Click Button 4 Handling (+)
-    if (btn4.click())
-    {
-        Serial.printf(" BTN 4 Click \r\n");
-        int min, hour, data, month, year;
-
-        STATE.menu_tmr = 0; // timer menu reset
-
-        switch (menu)
-        {
-        case IDLE:
-            // CarNUM (++) to IDLE state (no change TOP zone)
-            if (!UserText.hide_t)
-            {
-                UserText.carnum < 99 ? UserText.carnum++ : UserText.carnum = 0;
-                Serial.printf("CARNUM: %d \r\n", UserText.carnum);
-                SaveConfig();
-                Send_BSdata();
-            }
-            break;
-        // CarNUM (++) to General MENU  (change TOP zone)
-        case _CAR_NUM:
-            UserText.carnum < 99 ? UserText.carnum++ : UserText.carnum = 0;
-            Serial.printf("CARNUM: %d \r\n", UserText.carnum);
-            memset(name_2, 0, 25);
-            sprintf(name_2, "%d", UserText.carnum);
-            Send_BS_UserData(name_1, name_2);
-            SaveConfig();
-            break;
-        // GMT ++
-        case _GMT:
-            if (CFG.gmt >= -12 && CFG.gmt < 12)
-            {
-                CFG.gmt++;
-                memset(name_2, 0, 15);
+                strcat(name_1, "Час.пояс:");
                 if (CFG.gmt > 0)
                 {
                     sprintf(name_2, "+%d", CFG.gmt);
                 }
                 else
+                {
                     sprintf(name_2, "%d", CFG.gmt);
+                }
                 Send_BS_UserData(name_1, name_2);
-            }
-            Serial.printf("GMT: %d \r\n", CFG.gmt);
-            SaveConfig();
-            break;
-        // MIN ++
-        case _MIN:
-            min = Clock.minute;
-            min++;
-            if (min > 59)
-                min = 0;
-            Clock.minute = min;
-            Serial.printf("MIN: %d \r\n", min);
-            RTC.setTime(Clock);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", min);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // Hour ++
-        case _HOUR:
-            hour = Clock.hour;
-            hour++;
-            if (hour > 23)
-                hour = 0;
-            Clock.hour = hour;
-            RTC.setTime(Clock);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", hour);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Serial.printf("Hour: %d \n\r", Clock.hour);
-            Send_GPSdata();
-            break;
-        // Day ++
-        case _DAY:
-            data = Clock.date;
-            month = Clock.month;
-
-            data++;
-
-            if (data > constrain(data, 0, DS_dim(month - 1)))
-                data = 1;
-
-            Clock.date = data;
-            RTC.setTime(Clock);
-            Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", Clock.date);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // MONTH ++
-        case _MONTH:
-            month = Clock.month;
-            month++;
-            if (month > 12)
-            {
-                month = 1;
-            }
-            Clock.month = month;
-            RTC.setTime(Clock);
-            Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", month);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-        // Year ++
-        case _YEAR:
-            year = Clock.year;
-            if (year >= 2000 && year < 2099)
-            {
-                year++;
-            }
-            Clock.year = year;
-            RTC.setTime(Clock);
-            Serial.printf("Year: %d\r\n", Clock.year);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", Clock.year);
-            Send_BS_UserData(name_1, name_2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            Send_GPSdata();
-            break;
-
-        // Brightness ++
-        case _BRIGHT:
-            if (HCONF.bright >= 10 && HCONF.bright < 100)
-            {
-                HCONF.bright += 10;
-            }
-            Serial.printf("Bright: %d\r\n ", HCONF.bright);
-            memset(name_2, 0, 15);
-            sprintf(name_2, "%d", HCONF.bright);
-            Send_BS_UserData(name_1, name_2);
-            break;
-
-        // WC Signal State Logiq
-        case _WCL:
-            (HCONF.WCL >= 0 && HCONF.WCL < 2) ? HCONF.WCL += 1 : HCONF.WCL = 0;
-            Serial.printf("WCL: %d\r\n ", HCONF.WCL);
-            memset(name_2, 0, 15);
-            switch (HCONF.WCL)
-            {
-            case NORMAL:
-                sprintf(name_2, "Нормальн");
                 break;
-            case REVERSE:
-                sprintf(name_2, "Реверс");
+            case _MIN:
+                Serial.printf("Minute:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "Минута:");
+                sprintf(name_2, "%02d", Clock.minute);
+                Send_BS_UserData(name_1, name_2);
                 break;
-            case ONE_HALL:
-                sprintf(name_2, "1 Тамбур");
+            // Hour --
+            case _HOUR:
+                Serial.printf("Hour:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "Час:");
+                sprintf(name_2, "%02d", Clock.hour);
+                Send_BS_UserData(name_1, name_2);
+                break;
+            // Day --
+            case _DAY:
+                Serial.printf("Day:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "День:");
+                sprintf(name_2, "%d", Clock.date);
+                Send_BS_UserData(name_1, name_2);
+                break;
+            // MONTH --
+            case _MONTH:
+                Serial.printf("Month:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "Месяц:");
+                sprintf(name_2, "%d", Clock.month);
+                Send_BS_UserData(name_1, name_2);
+                break;
+            // Year --
+            case _YEAR:
+                Serial.printf("Year:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "Год:");
+                sprintf(name_2, "%d", Clock.year);
+                Send_BS_UserData(name_1, name_2);
+                break;
+            // Brightness --
+            case _BRIGHT:
+                old_bright = HCONF.bright;
+                Serial.printf("Brightness:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "Яркость:");
+                sprintf(name_2, "%02d", HCONF.bright);
+                Send_BS_UserData(name_1, name_2);
+                break;
+            // WC Signal State Logiq
+            case _WCL:
+                // Saving if NEW_BRIGHT != OLD
+                if (old_bright != HCONF.bright)
+                {
+                    SaveConfig();
+                    Serial.printf("Saving Brightness:\r\n");
+                    memset(name_1, 0, 25);
+                    memset(name_2, 0, 25);
+                    strcat(name_1, "Ожидайте");
+                    strcat(name_2, "...");
+                    Send_BS_UserData(name_1, name_2);
+
+                    vTaskDelay(1000 / portTICK_PERIOD_MS);
+                    STATE.StaticUPD = true;
+                    vTaskDelay(4000 / portTICK_PERIOD_MS);
+                }
+
+                Serial.printf("WC Signal Logiq:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "РасполWC");
+                if (HCONF.WCL == NORMAL)
+                {
+                    sprintf(name_2, "Нормальн");
+                }
+                else if (HCONF.WCL == REVERSE)
+                {
+                    sprintf(name_2, "Реверс");
+                }
+                else if (HCONF.WCL == ONE_HALL)
+                {
+                    sprintf(name_2, "1 Тамбур");
+                }
+                Send_BS_UserData(name_1, name_2);
+                break;
+
+            // WC Signal sensor state Preset
+            case _WCSS:
+                Serial.printf("WC Signal sensor preset:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "СигналWC");
+                if (HCONF.WCSS == SENSOR_OPEN)
+                {
+                    sprintf(name_2, "Разомкнут");
+                }
+                else
+                {
+                    sprintf(name_2, "Замкнут");
+                }
+                Send_BS_UserData(name_1, name_2);
+                break;
+            // WiFI ON / OFF
+            case _WiFi:
+                Serial.printf("WiFI Conrol:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "WiFi:");
+                if (STATE.WiFiEnable)
+                {
+                    sprintf(name_2, "ВКЛ");
+                }
+                else
+                    sprintf(name_2, "ОТКЛ");
+                Send_BS_UserData(name_1, name_2);
                 break;
             default:
                 break;
             }
-            SaveConfig();
-            Send_BS_UserData(name_1, name_2);
-            break;
-
-        // WC Signal sensor state Preset
-        case _WCSS:
-            memset(name_2, 0, 25);
-            if (HCONF.WCSS == SENSOR_OPEN)
-            {
-                HCONF.WCSS = SENSOR_CLOSE;
-                sprintf(name_2, "Замкнут");
-            }
-            else
-            {
-                HCONF.WCSS = SENSOR_OPEN;
-                sprintf(name_2, "Разомкнут");
-            }
-            SaveConfig();
-            Send_BS_UserData(name_1, name_2);
-            break;
-
-        // WiFI ON / OFF
-        case _WiFi:
-
-            if (STATE.WiFiEnable)
-            {
-                STATE.WiFiEnable = false;
-                Serial.println("WiFi_Disable");
-                memset(name_2, 0, 15);
-                sprintf(name_2, "ОТКЛ");
-                Send_BS_UserData(name_1, name_2);
-                WiFi.disconnect(true);
-                WiFi.mode(WIFI_OFF);
-            }
-            else
-            {
-                STATE.WiFiEnable = true;
-                Serial.println("WiFi_Enable");
-                memset(name_2, 0, 15);
-                sprintf(name_2, "ВКЛ");
-                Send_BS_UserData(name_1, name_2);
-                WIFIinit(AccessPoint);
-                vTaskDelay(500 / portTICK_PERIOD_MS);
-                HTTPinit(); // HTTP server initialisation
-            }
-            SaveConfig();
-            break;
-        default:
-            break;
         }
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
-    // Click Button 5 Handling (-)
-    if (btn5.click())
-    {
-        Serial.printf(" BTN 5 Click \r\n");
-        // Hour --
-        if (menu == IDLE)
+
+        // Holding Button 3 Handling (+)
+        if (btn3.getSteps() == 50)
         {
-            int hour = Clock.hour;
-            hour--;
-            if (hour < 0)
-                hour = 23;
-            Clock.hour = hour;
-            RTC.setTime(Clock);
-            Serial.printf("Hour: %d \n\r", Clock.hour);
-            Send_GPSdata();
+            Serial.printf(" BTN 3 STEP 50 \r\n");
+            // if (menu == IDLE)
+            // {
+            uint32_t now;
+            uint8_t cnt = 3;
+
+            memset(name_1, 0, 25);
+            memset(name_2, 0, 25);
+
+            STATE.DUPDBlock = true;
+            strcat(name_1, "Cброс");
+            itoa(cnt, name_2 + strlen(name_2), DEC);
+            Send_BS_UserData(name_1, name_2);
+
+            now = millis();
+            while (millis() - now < 3500)
+            {
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                if (cnt != 0)
+                {
+                    cnt--;
+                    memset(name_2, 0, 25);
+                    itoa(cnt, name_2 + strlen(name_2), DEC);
+                    Send_BS_UserData(name_1, name_2);
+                }
+            }
+            Serial.println("#### FACTORY RESET ####");
+            memset(name_1, 0, 25);
+            memset(name_2, 0, 25);
+            strcat(name_1, "Сброшено");
+            Send_BS_UserData(name_1, name_2);
+            SystemFactoryReset();
+            SaveConfig();
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            Serial.println("#### SAVE DONE ####");
+            ESP.restart();
+            // }
+            btn3.clear();
         }
-        btn1.clear();
-        btn2.clear();
-        btn3.clear();
-        btn4.clear();
-        btn5.clear();
-    }
-    if (btn5.getSteps() == 50)
-    {
-        Serial.printf(" BTN 5 STEP 50 \r\n");
+
+        // Click Button 4 Handling (+)
+        if (btn4.click())
+        {
+            Serial.printf(" BTN 4 Click \r\n");
+            int min, hour, data, month, year;
+
+            STATE.menu_tmr = 0; // timer menu reset
+
+            switch (menu)
+            {
+            case IDLE:
+                // CarNUM (++) to IDLE state (no change TOP zone)
+                if (!UserText.hide_t)
+                {
+                    UserText.carnum < 99 ? UserText.carnum++ : UserText.carnum = 0;
+                    Serial.printf("CARNUM: %d \r\n", UserText.carnum);
+                    SaveConfig();
+                    Send_BSdata();
+                }
+                break;
+            // CarNUM (++) to General MENU  (change TOP zone)
+            case _CAR_NUM:
+                UserText.carnum < 99 ? UserText.carnum++ : UserText.carnum = 0;
+                Serial.printf("CARNUM: %d \r\n", UserText.carnum);
+                memset(name_2, 0, 25);
+                sprintf(name_2, "%d", UserText.carnum);
+                Send_BS_UserData(name_1, name_2);
+                SaveConfig();
+                break;
+            // GMT ++
+            case _GMT:
+                if (CFG.gmt >= -12 && CFG.gmt < 12)
+                {
+                    CFG.gmt++;
+                    memset(name_2, 0, 15);
+                    if (CFG.gmt > 0)
+                    {
+                        sprintf(name_2, "+%d", CFG.gmt);
+                    }
+                    else
+                        sprintf(name_2, "%d", CFG.gmt);
+                    Send_BS_UserData(name_1, name_2);
+                }
+                Serial.printf("GMT: %d \r\n", CFG.gmt);
+                SaveConfig();
+                break;
+            // MIN ++
+            case _MIN:
+                min = Clock.minute;
+                min++;
+                if (min > 59)
+                    min = 0;
+                Clock.minute = min;
+                Serial.printf("MIN: %d \r\n", min);
+                RTC.setTime(Clock);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", min);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // Hour ++
+            case _HOUR:
+                hour = Clock.hour;
+                hour++;
+                if (hour > 23)
+                    hour = 0;
+                Clock.hour = hour;
+                RTC.setTime(Clock);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", hour);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Serial.printf("Hour: %d \n\r", Clock.hour);
+                Send_GPSdata();
+                break;
+            // Day ++
+            case _DAY:
+                data = Clock.date;
+                month = Clock.month;
+
+                data++;
+
+                if (data > constrain(data, 0, DS_dim(month - 1)))
+                    data = 1;
+
+                Clock.date = data;
+                RTC.setTime(Clock);
+                Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", Clock.date);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // MONTH ++
+            case _MONTH:
+                month = Clock.month;
+                month++;
+                if (month > 12)
+                {
+                    month = 1;
+                }
+                Clock.month = month;
+                RTC.setTime(Clock);
+                Serial.printf("DATA: %d \t MONTH: %d \r\n ", Clock.date, Clock.month);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", month);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+            // Year ++
+            case _YEAR:
+                year = Clock.year;
+                if (year >= 2000 && year < 2099)
+                {
+                    year++;
+                }
+                Clock.year = year;
+                RTC.setTime(Clock);
+                Serial.printf("Year: %d\r\n", Clock.year);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", Clock.year);
+                Send_BS_UserData(name_1, name_2);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                Send_GPSdata();
+                break;
+
+            // Brightness ++
+            case _BRIGHT:
+                if (HCONF.bright >= 10 && HCONF.bright < 100)
+                {
+                    HCONF.bright += 10;
+                }
+                Serial.printf("Bright: %d\r\n ", HCONF.bright);
+                memset(name_2, 0, 15);
+                sprintf(name_2, "%d", HCONF.bright);
+                Send_BS_UserData(name_1, name_2);
+                break;
+
+            // WC Signal State Logiq
+            case _WCL:
+                (HCONF.WCL >= 0 && HCONF.WCL < 2) ? HCONF.WCL += 1 : HCONF.WCL = 0;
+                Serial.printf("WCL: %d\r\n ", HCONF.WCL);
+                memset(name_2, 0, 15);
+                switch (HCONF.WCL)
+                {
+                case NORMAL:
+                    sprintf(name_2, "Нормальн");
+                    break;
+                case REVERSE:
+                    sprintf(name_2, "Реверс");
+                    break;
+                case ONE_HALL:
+                    sprintf(name_2, "1 Тамбур");
+                    break;
+                default:
+                    break;
+                }
+                SaveConfig();
+                Send_BS_UserData(name_1, name_2);
+                break;
+
+            // WC Signal sensor state Preset
+            case _WCSS:
+                memset(name_2, 0, 25);
+                if (HCONF.WCSS == SENSOR_OPEN)
+                {
+                    HCONF.WCSS = SENSOR_CLOSE;
+                    sprintf(name_2, "Замкнут");
+                }
+                else
+                {
+                    HCONF.WCSS = SENSOR_OPEN;
+                    sprintf(name_2, "Разомкнут");
+                }
+                SaveConfig();
+                Send_BS_UserData(name_1, name_2);
+                break;
+
+            // WiFI ON / OFF
+            case _WiFi:
+
+                if (STATE.WiFiEnable)
+                {
+                    STATE.WiFiEnable = false;
+                    Serial.println("WiFi_Disable");
+                    memset(name_2, 0, 15);
+                    sprintf(name_2, "ОТКЛ");
+                    Send_BS_UserData(name_1, name_2);
+                    WiFi.disconnect(true);
+                    WiFi.mode(WIFI_OFF);
+                }
+                else
+                {
+                    STATE.WiFiEnable = true;
+                    Serial.println("WiFi_Enable");
+                    memset(name_2, 0, 15);
+                    sprintf(name_2, "ВКЛ");
+                    Send_BS_UserData(name_1, name_2);
+                    WIFIinit(AccessPoint);
+                    vTaskDelay(500 / portTICK_PERIOD_MS);
+                    HTTPinit(); // HTTP server initialisation
+                }
+                SaveConfig();
+                break;
+            default:
+                break;
+            }
+        }
+        // Click Button 5 Handling (-)
+        if (btn5.click())
+        {
+            Serial.printf(" BTN 5 Click \r\n");
+            // Hour --
+            if (menu == IDLE)
+            {
+                int hour = Clock.hour;
+                hour--;
+                if (hour < 0)
+                    hour = 23;
+                Clock.hour = hour;
+                RTC.setTime(Clock);
+                Serial.printf("Hour: %d \n\r", Clock.hour);
+                Send_GPSdata();
+            }
+        }
+        break;
+    case 2:
+        btn2.tick();
+        btn3.tick();
+        btn4.tick();
+        // Click Button 2 Handling (TTS)
+        if (btn2.click())
+        {
+            STATE.TTS = true;
+        }
+        // Click Button 3 Handling (DTS) WC1
+        if (btn3.click())
+        {
+            STATE.DSTS1 = true;
+        }
+        // Click Button 4 Handling (DTS) WC2
+        if (btn4.click())
+        {
+            STATE.DSTS2 = true;
+        }
+        break;
+    case 3:
+        break;
+    default:
+        break;
     }
 }
 //=========================================================================

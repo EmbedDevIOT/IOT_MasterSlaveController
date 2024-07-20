@@ -331,13 +331,24 @@ void SystemFactoryReset()
 void getTimeChar(char *array)
 {
   // DateTime now = RTC.getTime();
+  uint8_t hour = Clock.hour;
+  // if(hour == 0){
+  //   hour = 24;
+  // }
+  int TimGMT = hour - CFG.gmt;
 
-  uint8_t TimGMT = Clock.hour - CFG.gmt;
+  Serial.printf("TimGMT1: %d \r\n", TimGMT);
 
-  if (TimGMT >= 24)
+  if (TimGMT < 0)
+  {
+    TimGMT = hour + (24 - CFG.gmt);
+  }
+  else if (TimGMT > 24) 
   {
     TimGMT = TimGMT - 24;
   }
+
+  Serial.printf("TimGMT2: %d \r\n", TimGMT);
 
   // array[0] = now.hour / 10 + '0';
   // array[1] = now.hour % 10 + '0';
@@ -348,10 +359,11 @@ void getTimeChar(char *array)
   array[4] = Clock.second / 10 + '0';
   array[5] = Clock.second % 10 + '0';
   array[6] = '\0';
-  for (uint8_t i = 0; i < 6; i++)
-  {
-    Serial.print(array[i]);
-  }
+
+  // for (uint8_t i = 0; i < 6; i++)
+  // {
+  //   Serial.print(array[i]);
+  // }
 }
 /**********************************************************************************/
 
