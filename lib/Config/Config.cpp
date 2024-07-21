@@ -359,11 +359,11 @@ void getTimeChar(char *array)
   array[5] = Clock.second % 10 + '0';
   array[6] = '\0';
 
-  for (uint8_t i = 0; i <= 6; i++)
-  {
-    Serial.print(array[i]);
-  }
-  Serial.print("\r\n");
+  // for (uint8_t i = 0; i <= 6; i++)
+  // {
+  //   Serial.print(array[i]);
+  // }
+  // Serial.print("\r\n");
 }
 /**********************************************************************************/
 

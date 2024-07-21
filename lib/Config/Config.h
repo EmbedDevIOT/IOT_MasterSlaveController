@@ -62,7 +62,8 @@
 #define TX1_PIN 33 // UART1_TX
 #define RX1_PIN 32 // UART1_RX
 #endif
-#define DE_RE 35 // DE_MAX13444
+// #define DE_RE 35 // DE_MAX13444
+#define DE_RE 16 // DE_MAX13444
 
 // UART 2 - GPS -
 #define GPS_SERIAL2
@@ -254,6 +255,7 @@ extern HardwareConfig HCONF;
 //=======================================================================
 struct Flag
 {
+  bool I2C_Block = 0;
   bool StaticUPD : 1;
   uint8_t cnt_Supd = 0;
   bool DynamicUPD : 1;

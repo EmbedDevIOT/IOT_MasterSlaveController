@@ -100,11 +100,12 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.3.6";
-    CFG.fwdate = "20.07.2024";
+    CFG.fw = "0.3.7";
+    CFG.fwdate = "21.07.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
+
     SystemInit();
 
     // GPIO init
@@ -119,7 +120,7 @@ void setup()
     pinMode(SW1, INPUT_PULLUP);
     pinMode(SW2, INPUT_PULLUP);
 
-    // RS 485 ADR SET
+    // RS 485 ADR SET (PINOUT CONFIGURATION)
     if (digitalRead(SW1) && digitalRead(SW2))
     {
         HCONF.ADR = 0;
@@ -127,16 +128,25 @@ void setup()
     else if (!digitalRead(SW1) && digitalRead(SW2))
     {
         HCONF.ADR = 1;
+        pinMode(DE_RE, OUTPUT);
+        digitalWrite(DE_RE, HIGH);
     }
     else if (digitalRead(SW1) && !digitalRead(SW2))
     {
         HCONF.ADR = 2;
+        pinMode(DE_RE, OUTPUT);
+        digitalWrite(DE_RE, LOW);
     }
     else if (!digitalRead(SW1) && !digitalRead(SW2))
     {
         HCONF.ADR = 3;
     }
-    Serial.printf("RS485 ADR: %d \r\n", HCONF.ADR);
+
+    Serial.print("\r\n");
+    Serial.println(F("##############  RS CONFIGURATION  ###############"));
+    Serial.printf("ADR: %d \r\n", HCONF.ADR);
+    Serial.println(F("#################################################"));
+    Serial.print("\r\n");
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
     for (uint8_t i = 1; i <= HCONF.ADR; i++)
@@ -268,8 +278,11 @@ void HandlerCore0(void *pvParameters)
     Serial.println(xPortGetCoreID());
     for (;;)
     {
-        // UART_Recieve_Data();
         Amplifier.loop();
+
+        if (HCONF.ADR == 2)
+            UART_Recieve_Data();
+
         // Exit menu (20 sec timer)
         if ((HCONF.ADR == 1) && (STATE.menu_tmr == 20))
         {
@@ -330,7 +343,9 @@ void HandlerTask1Wire(void *pvParameters)
     Serial.println(xPortGetCoreID());
     for (;;)
     {
-        // Serial.printf("sec: %d \r\n", sec);
+        STATE.SensWC1 = GetWCState(WC1);
+        STATE.SensWC2 = GetWCState(WC2);
+        SetColorWC();
 
         if (HCONF.ADR == 1)
         {
@@ -350,6 +365,7 @@ void HandlerTask1Wire(void *pvParameters)
                 GetDSData();
                 sec = 1;
             }
+
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
     }
@@ -365,7 +381,8 @@ void HandlerCore1(void *pvParameters)
     {
         if (HCONF.ADR == 1)
         {
-            Clock = RTC.getTime();
+            if (STATE.I2C_Block == false)
+                Clock = RTC.getTime();
             DebugInfo();
             if (menu != IDLE)
                 STATE.menu_tmr++;
@@ -378,7 +395,7 @@ void HandlerCore1(void *pvParameters)
 // Core 1. 1000ms
 void HandlerTask500(void *pvParameters)
 {
-    Serial2.print("\r\n\r\n"); // Костыль инита RS485
+    // Serial2.print("\r\n\r\n"); // Костыль инита RS485
 
     Serial.print("Task: Sending RS485 data \r\n");
     Serial.print("T:1000ms Stack:12000 Core:");
@@ -390,11 +407,6 @@ void HandlerTask500(void *pvParameters)
         if (HCONF.ADR == 1)
         {
             sec_cnt++;
-            // Перенести
-            STATE.SensWC1 = GetWCState(WC1);
-            STATE.SensWC2 = GetWCState(WC2);
-            SetColorWC();
-            // Перенести
             SendtoRS485();
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -572,6 +584,8 @@ void ButtonHandler()
     switch (HCONF.ADR)
     {
     case 1:
+        STATE.I2C_Block = true;
+
         btn1.tick();
         btn2.tick();
         btn3.tick();
@@ -1247,8 +1261,10 @@ void ButtonHandler()
                 Send_GPSdata();
             }
         }
+        STATE.I2C_Block = false;
         break;
     case 2:
+        STATE.I2C_Block = true;
         btn2.tick();
         btn3.tick();
         btn4.tick();
@@ -1267,6 +1283,7 @@ void ButtonHandler()
         {
             STATE.DSTS2 = true;
         }
+        STATE.I2C_Block = false;
         break;
     case 3:
         break;
@@ -1278,11 +1295,13 @@ void ButtonHandler()
 
 void UART_Recieve_Data()
 {
-    if (Serial.available())
+    if (Serial2.available())
     {
+        Serial.println("1");
+
         // put streamURL in serial monitor
         // audio.stopSong();
-        String r = Serial.readString();
+        String r = Serial2.readString();
         bool block_st = false;
         r.trim();
         if (r.length() > 3)
