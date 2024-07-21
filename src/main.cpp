@@ -4,14 +4,21 @@
 #include "FileConfig.h"
 #include "HTTP.h"
 #include "keyboard.h"
+#include "tinyxml2.h"
 
 #define DEBUG // Debug control ON
 //======================================================================
 
 //=========================== GLOBAL VARIABLES =========================
-bool WiFiVD = true;
+using namespace tinyxml2;
+
+bool WiFiVD = true; // Заменить на флаг STATE.WiFi
+
+const char *ptr;
+String testXML;
 
 uint8_t sec = 0;
+boolean recievedFlag;
 
 uint8_t sec_cnt = 0;
 uint8_t menu = 0;     // State menu (levels)
@@ -35,6 +42,9 @@ DallasTemperature ds18b20_1(&oneWire1);
 DallasTemperature ds18b20_2(&oneWire2);
 
 HardwareSerial RS485(2);
+XMLDocument xmlDocument;
+XMLNode *gps_data;
+XMLElement *element;
 
 Button btn1(7, INPUT, LOW);
 Button btn2(6, INPUT, LOW);
@@ -100,7 +110,7 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.3.7";
+    CFG.fw = "0.3.8";
     CFG.fwdate = "21.07.2024";
 
     Serial.begin(UARTSpeed);
@@ -244,16 +254,19 @@ void setup()
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 
-    // Sending RS485 data
-    xTaskCreatePinnedToCore(
-        HandlerTask500,
-        "TaskCore1_500ms",
-        16384, // 12000
-        NULL,
-        1,
-        &TaskCore1_500ms,
-        1);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    if (HCONF.ADR == 1)
+    {
+        // Sending RS485 data
+        xTaskCreatePinnedToCore(
+            HandlerTask500,
+            "TaskCore1_500ms",
+            16384, // 12000
+            NULL,
+            1,
+            &TaskCore1_500ms,
+            1);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
 }
 //=======================================================================
 
@@ -281,7 +294,36 @@ void HandlerCore0(void *pvParameters)
         Amplifier.loop();
 
         if (HCONF.ADR == 2)
-            UART_Recieve_Data();
+        {
+            // UART_Recieve_Data();
+            while (Serial2.available() > 0)
+            {
+                digitalWrite(LED_ST, HIGH);
+                testXML += (char)Serial2.read();
+                vTaskDelay(2 / portTICK_PERIOD_MS);
+                recievedFlag = true;
+                digitalWrite(LED_ST, LOW);
+            }
+            if (recievedFlag == true)
+            {
+                ptr = testXML.c_str();
+                Serial.println("to str");
+                if (xmlDocument.Parse(ptr) != XML_SUCCESS)
+                {
+                    Serial.println("Error parsing");
+                    return;
+                };
+                gps_data = xmlDocument.FirstChild();
+                element = gps_data->FirstChildElement("wc");
+
+                int val;
+                element->QueryIntText(&val);
+
+                Serial.println(val);
+                recievedFlag = false;
+                testXML.clear();
+            }
+        }
 
         // Exit menu (20 sec timer)
         if ((HCONF.ADR == 1) && (STATE.menu_tmr == 20))
@@ -1298,6 +1340,7 @@ void UART_Recieve_Data()
     if (Serial2.available())
     {
         Serial.println("1");
+        digitalWrite(LED_ST, HIGH);
 
         // put streamURL in serial monitor
         // audio.stopSong();
@@ -1306,6 +1349,7 @@ void UART_Recieve_Data()
         r.trim();
         if (r.length() > 3)
         {
+
             // Amplifier.connecttohost(r.c_str());
             if (r == "time")
             {
