@@ -5,6 +5,7 @@
 #include "HTTP.h"
 #include "keyboard.h"
 #include "tinyxml2.h"
+#include "SharedParserFunctions.hpp"
 
 #define DEBUG // Debug control ON
 //======================================================================
@@ -25,6 +26,9 @@ uint8_t menu = 0;     // State menu (levels)
 char name_1[25] = ""; // menu message to show TOP zone
 char name_2[25] = ""; // menu message to show BOT zone
 uint8_t old_bright = 0;
+
+//-----------------------------------------------------
+
 //======================================================================
 
 //================================ OBJECTs =============================
@@ -59,6 +63,7 @@ DateTime Clock;
 GlobalConfig CFG;
 HardwareConfig HCONF;
 Flag STATE;
+_XML xml;
 
 color col_carnum;
 color col_time;
@@ -79,7 +84,7 @@ void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void HandlerTask500(void *pvParameters);
 void HandlerTask1Wire(void *pvParameters);
-void I2CExpanderInit();
+bool parseBuffer(char *buffer, uint32_t length);
 void ButtonHandler();
 void SendtoRS485();
 void GetDSData(void);
@@ -89,16 +94,118 @@ void UART_Recieve_Data();
 void Tell_me_CurrentTime();
 void Tell_me_CurrentData();
 void Tell_me_DoorState(bool state);
+//=======================================================================
+//=======================================================================
 
 //=======================================================================
-void I2CExpanderInit()
+//=======================================================================
+bool parseBuffer(char *buffer, uint32_t length)
 {
-    // I2CBUT.begin();
-    // I2CBUT.pinMode(P7, INPUT_PULLUP);
-    // I2CBUT.pinMode(P6, INPUT_PULLUP);
-    // I2CBUT.pinMode(P5, INPUT_PULLUP);
-    // I2CBUT.pinMode(P4, INPUT_PULLUP);
-    // I2CBUT.pinMode(P3, INPUT_PULLUP);
+    Buf_t xmlBuf;
+    bool result;
+    bool addressMatched = false;
+    bool addressTagsAdded = false;
+
+    int tmp = 0;
+    double temp_speed = 0;
+    int timezone = 0;
+
+    unsigned char sec = 0;   // 0..59
+    unsigned char min = 0;   // 0..59
+    unsigned char hour = 0;  // 0..23
+    unsigned char day = 0;   // 1..31
+    unsigned char month = 0; // 1..12
+    unsigned short year = 0; // 1..2999
+    int c_speed; // km/h
+    std::string auxtext1;
+
+    auto bufferEnd = buffer + length;
+
+    while (reinterpret_cast<uint32_t>(buffer) < reinterpret_cast<uint32_t>(bufferEnd))
+    {
+        // Get line from buffer
+        if (!extractLineAndParseXml(&buffer, bufferEnd, xmlBuf))
+            return false;
+
+        if (xmlBuf.tag == "gps_data")
+        {
+            // general tag
+            continue;
+        }
+
+        // Stop processing on the end tag
+        if (xmlBuf.end_tag == "gps_data")
+        {
+
+            if (2020 <= year && year <= 2060)
+            {
+                // clock.SetFullTimeGPS(hour, min, sec, timezone, day, month, year);
+                return true;
+            }
+            else
+                return false;
+        }
+
+        // Here starts specific device parameters parsing
+        if (xmlBuf.tag == "gmt")
+        {
+            timezone = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 10));
+            Serial.print(timezone);
+        }
+        else if (xmlBuf.tag == "time")
+        {
+            tmp = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
+            sec = (tmp % 100);
+            min = (tmp / 100) % 100;
+            hour = (tmp / 10000);
+        }
+        else if (xmlBuf.tag == "date")
+        {
+            tmp = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
+            day = tmp / 10000;
+            month = (tmp / 100) % 100;
+            year = 2000 + (tmp % 100); // 2000 is added cause yy
+            Serial.println(day);
+            Serial.println(month);
+            Serial.println(year);
+        }
+        else if (xmlBuf.tag == "lat")
+        {
+            // skip
+        }
+        else if (xmlBuf.tag == "lon")
+        {
+            // skip
+        }
+        else if (xmlBuf.tag == "speed")
+        {
+            temp_speed = strtod(xmlBuf.value.c_str(), NULL);
+
+            c_speed = (int)(temp_speed * 1.852);
+        }
+        else if (xmlBuf.tag == "temp1")
+        {
+
+            if (xmlBuf.value[0] != 'N')
+            {
+
+                // temperature_data.temp1 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
+            }
+        }
+        else if (xmlBuf.tag == "temp2")
+        {
+            if (xmlBuf.value[0] != 'N')
+            {
+
+                // temperature_data.temp2 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
+            }
+        }
+        else if (xmlBuf.tag == "auxtext1")
+        {
+            auxtext1 = xmlBuf.value;
+        }
+    }
+    return false;
 }
 //=======================================================================
 static uint8_t DS_dim(uint8_t i)
@@ -307,19 +414,39 @@ void HandlerCore0(void *pvParameters)
             if (recievedFlag == true)
             {
                 ptr = testXML.c_str();
-                Serial.println("to str");
-                if (xmlDocument.Parse(ptr) != XML_SUCCESS)
-                {
-                    Serial.println("Error parsing");
-                    return;
-                };
-                gps_data = xmlDocument.FirstChild();
-                element = gps_data->FirstChildElement("wc");
+                Serial.println("to char");
 
-                int val;
-                element->QueryIntText(&val);
+                bool result = parseBuffer((char*)ptr, strlen(ptr));
 
-                Serial.println(val);
+                // for (uint8_t i = 0; i <= strlen(ptr); i++)
+                // {
+                //   Serial.print(ptr[i]);
+                //   if (ptr[i] == '<')
+                //   {
+                //     /* code */
+                //   }
+
+                // }
+                // Serial.print("\r\n");
+
+                // if (xmlDocument.Parse(ptr) != XML_SUCCESS)
+                // {
+                //     Serial.println("Error parsing");
+                //     return;
+                // };
+                // gps_data = xmlDocument.FirstChild();
+                // element = gps_data->FirstChildElement("gmt");
+                // element->QueryIntText(&xml.GMT);
+                // Serial.println(xml.GMT);
+
+                // element = gps_data->FirstChildElement("wc");
+                // element->QueryIntText(&xml.WC);
+                // Serial.println(xml.WC);
+
+                // element = gps_data->FirstChildElement("wc");
+                // element->QueryIntText(&xml.WC);
+                // Serial.println(xml.WC);
+
                 recievedFlag = false;
                 testXML.clear();
             }

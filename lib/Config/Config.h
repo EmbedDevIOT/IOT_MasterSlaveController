@@ -280,8 +280,21 @@ struct Flag
   uint8_t menu_tmr = 0;  
 };
 extern Flag STATE;
-
 //============================================================================
+struct _XML
+{
+  int GMT = 0;
+  uint8_t Hour = 0;
+  uint8_t Minute = 0;
+  uint8_t Seconds = 0;
+  uint8_t Day = 0;
+  uint8_t Month = 0;
+  uint8_t Year = 0;
+  uint8_t TS1 = 0;
+  uint8_t TS2 = 0;
+  int WC = 0;
+};
+extern _XML xml;
 
 //============================================================================
 void ColorWrite(char *buf, struct color *C);
