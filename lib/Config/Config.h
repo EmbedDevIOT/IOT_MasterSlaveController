@@ -275,27 +275,13 @@ struct Flag
   bool VolumeUPD : 1;  // Volume update
   bool SensWC1 = 0;    // Sensor WC1 current state
   bool SensWC2 = 0;    // Sensor WC2 current state
+  bool WC = 0;         // General State WC !!!
   bool StateWC1 = 0;   // General State WC_1 
   bool StateWC2 = 0;   // General State WC_2 
   uint8_t menu_tmr = 0;  
 };
 extern Flag STATE;
 //============================================================================
-struct _XML
-{
-  int GMT = 0;
-  uint8_t Hour = 0;
-  uint8_t Minute = 0;
-  uint8_t Seconds = 0;
-  uint8_t Day = 0;
-  uint8_t Month = 0;
-  uint8_t Year = 0;
-  uint8_t TS1 = 0;
-  uint8_t TS2 = 0;
-  int WC = 0;
-};
-extern _XML xml;
-
 //============================================================================
 void ColorWrite(char *buf, struct color *C);
 void ColorSet(struct color *CS, uint8_t _color);
@@ -316,5 +302,6 @@ void Send_ITdata(uint8_t adr);
 void Send_BSdata();
 void Send_BS_UserData(char *msg1, char *msg2);
 unsigned int CRC16_mb(char *buf, int len);
+uint16_t calcCRC(char *str, uint32_t len);
 //============================================================================
 #endif // _Config_H

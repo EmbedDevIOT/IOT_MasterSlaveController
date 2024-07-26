@@ -4,14 +4,12 @@
 #include "FileConfig.h"
 #include "HTTP.h"
 #include "keyboard.h"
-#include "tinyxml2.h"
 #include "SharedParserFunctions.hpp"
 
 #define DEBUG // Debug control ON
 //======================================================================
 
 //=========================== GLOBAL VARIABLES =========================
-using namespace tinyxml2;
 
 bool WiFiVD = true; // Заменить на флаг STATE.WiFi
 
@@ -20,6 +18,7 @@ String testXML;
 
 uint8_t sec = 0;
 boolean recievedFlag;
+uint16_t gps_new_crc;
 
 uint8_t sec_cnt = 0;
 uint8_t menu = 0;     // State menu (levels)
@@ -46,9 +45,6 @@ DallasTemperature ds18b20_1(&oneWire1);
 DallasTemperature ds18b20_2(&oneWire2);
 
 HardwareSerial RS485(2);
-XMLDocument xmlDocument;
-XMLNode *gps_data;
-XMLElement *element;
 
 Button btn1(7, INPUT, LOW);
 Button btn2(6, INPUT, LOW);
@@ -63,7 +59,6 @@ DateTime Clock;
 GlobalConfig CFG;
 HardwareConfig HCONF;
 Flag STATE;
-_XML xml;
 
 color col_carnum;
 color col_time;
@@ -116,8 +111,9 @@ bool parseBuffer(char *buffer, uint32_t length)
     unsigned char day = 0;   // 1..31
     unsigned char month = 0; // 1..12
     unsigned short year = 0; // 1..2999
-    int c_speed; // km/h
+    int c_speed;             // km/h
     std::string auxtext1;
+    // std::string crc;
 
     auto bufferEnd = buffer + length;
 
@@ -125,7 +121,9 @@ bool parseBuffer(char *buffer, uint32_t length)
     {
         // Get line from buffer
         if (!extractLineAndParseXml(&buffer, bufferEnd, xmlBuf))
+        {
             return false;
+        }
 
         if (xmlBuf.tag == "gps_data")
         {
@@ -136,7 +134,6 @@ bool parseBuffer(char *buffer, uint32_t length)
         // Stop processing on the end tag
         if (xmlBuf.end_tag == "gps_data")
         {
-
             if (2020 <= year && year <= 2060)
             {
                 // clock.SetFullTimeGPS(hour, min, sec, timezone, day, month, year);
@@ -149,25 +146,30 @@ bool parseBuffer(char *buffer, uint32_t length)
         // Here starts specific device parameters parsing
         if (xmlBuf.tag == "gmt")
         {
-            timezone = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 10));
-            Serial.print(timezone);
+            CFG.gmt = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 10));
         }
         else if (xmlBuf.tag == "time")
         {
             tmp = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-            sec = (tmp % 100);
-            min = (tmp / 100) % 100;
-            hour = (tmp / 10000);
+            Clock.second = (tmp % 100);
+            Clock.minute = (tmp / 100) % 100;
+            Clock.hour = (tmp / 10000);
+            Serial.printf("Time: %d:%d:%d", Clock.hour, Clock.minute, Clock.second);
+            // sec = (tmp % 100);
+            // min = (tmp / 100) % 100;
+            // hour = (tmp / 10000);
         }
         else if (xmlBuf.tag == "date")
         {
             tmp = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-            day = tmp / 10000;
-            month = (tmp / 100) % 100;
-            year = 2000 + (tmp % 100); // 2000 is added cause yy
-            Serial.println(day);
-            Serial.println(month);
-            Serial.println(year);
+            Clock.date = tmp / 10000;
+            Clock.month = (tmp / 100) % 100;
+            Clock.year = 2000 + (tmp % 100); // 2000 is added cause yy
+            Serial.printf("Time: %d:%d:%d", Clock.date, Clock.month, Clock.year);
+
+            // day = tmp / 10000;
+            // month = (tmp / 100) % 100;
+            // year = 2000 + (tmp % 100); // 2000 is added cause yy
         }
         else if (xmlBuf.tag == "lat")
         {
@@ -188,7 +190,7 @@ bool parseBuffer(char *buffer, uint32_t length)
 
             if (xmlBuf.value[0] != 'N')
             {
-
+                HCONF.dsT1 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
                 // temperature_data.temp1 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
             }
         }
@@ -196,13 +198,27 @@ bool parseBuffer(char *buffer, uint32_t length)
         {
             if (xmlBuf.value[0] != 'N')
             {
-
-                // temperature_data.temp2 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
+                {
+                    HCONF.dsT2 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
+                    // temperature_data.temp2 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
+                }
             }
         }
         else if (xmlBuf.tag == "auxtext1")
         {
             auxtext1 = xmlBuf.value;
+        }
+        else if (xmlBuf.tag == "wc")
+        {
+            STATE.WC = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 10));
+        }
+        else if (xmlBuf.tag == "gps_crc")
+        {
+            gps_new_crc = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 16));
+
+            Serial.println();
+            Serial.printf("GPS_CRC:");
+            Serial.println(gps_new_crc);
         }
     }
     return false;
@@ -217,8 +233,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.3.8";
-    CFG.fwdate = "21.07.2024";
+    CFG.fw = "0.4.0";
+    CFG.fwdate = "26.07.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
@@ -348,18 +364,15 @@ void setup()
     }
 
     // Core 1. 1000ms (Read RTC / Debug Info / menu timer)
-    if (HCONF.ADR == 1)
-    {
-        xTaskCreatePinnedToCore(
-            HandlerCore1,
-            "TaskCore1_Gen",
-            2048,
-            NULL,
-            1,
-            &TaskCore1_Gen,
-            1);
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
+    xTaskCreatePinnedToCore(
+        HandlerCore1,
+        "TaskCore1_Gen",
+        2048,
+        NULL,
+        1,
+        &TaskCore1_Gen,
+        1);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
     if (HCONF.ADR == 1)
     {
@@ -413,39 +426,17 @@ void HandlerCore0(void *pvParameters)
             }
             if (recievedFlag == true)
             {
+                uint16_t calculated_crc = 0;
                 ptr = testXML.c_str();
-                Serial.println("to char");
 
-                bool result = parseBuffer((char*)ptr, strlen(ptr));
 
-                // for (uint8_t i = 0; i <= strlen(ptr); i++)
-                // {
-                //   Serial.print(ptr[i]);
-                //   if (ptr[i] == '<')
-                //   {
-                //     /* code */
-                //   }
+                // Добавить CRC
+                calculated_crc = calcCRC((char *)ptr, strlen(ptr));
 
-                // }
-                // Serial.print("\r\n");
+                // Serial.printf("CALC CRC: %04x \r\n", calculated_crc);
+                // Serial.printf("NEW CRC: %04x \r\n", gps_new_crc);
 
-                // if (xmlDocument.Parse(ptr) != XML_SUCCESS)
-                // {
-                //     Serial.println("Error parsing");
-                //     return;
-                // };
-                // gps_data = xmlDocument.FirstChild();
-                // element = gps_data->FirstChildElement("gmt");
-                // element->QueryIntText(&xml.GMT);
-                // Serial.println(xml.GMT);
-
-                // element = gps_data->FirstChildElement("wc");
-                // element->QueryIntText(&xml.WC);
-                // Serial.println(xml.WC);
-
-                // element = gps_data->FirstChildElement("wc");
-                // element->QueryIntText(&xml.WC);
-                // Serial.println(xml.WC);
+                bool result = parseBuffer((char *)ptr, strlen(ptr));
 
                 recievedFlag = false;
                 testXML.clear();
@@ -491,7 +482,7 @@ void HandlerCore0(void *pvParameters)
 
         if (STATE.DSTS2)
         {
-            Tell_me_DoorState(STATE.StateWC2);
+            Tell_me_DoorState(STATE.WC);
             STATE.DSTS2 = false;
         }
 
@@ -552,10 +543,10 @@ void HandlerCore1(void *pvParameters)
         {
             if (STATE.I2C_Block == false)
                 Clock = RTC.getTime();
-            DebugInfo();
             if (menu != IDLE)
                 STATE.menu_tmr++;
         }
+        DebugInfo();
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -1530,7 +1521,7 @@ void Tell_me_CurrentTime()
     buf.clear();
     // vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    Clock = RTC.getTime();
+    // Clock = RTC.getTime();
     buf = "/sound/H/";
 
     if ((Clock.hour) != 24)
@@ -1559,7 +1550,7 @@ void Tell_me_CurrentTime()
     buf.clear();
     // vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    Clock = RTC.getTime();
+    // Clock = RTC.getTime();
     buf = "/sound/Mi/";
     buf += "min";
     buf += Clock.minute;

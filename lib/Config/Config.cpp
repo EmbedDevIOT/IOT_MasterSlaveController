@@ -248,16 +248,17 @@ void DebugInfo()
     Serial.println(message);
     sprintf(message, "T1: %0.1f T2: %0.1f", HCONF.dsT1, HCONF.dsT2);
     Serial.println(message);
-    sprintf(message, "T1_OFS: %d T2_OFS: %d", HCONF.T1_offset, HCONF.T2_offset);
+    sprintf(message, "WC: %d", STATE.WC);
     Serial.println(message);
-    sprintf(message, "WC1 | Sensor: %d State %d", STATE.SensWC1, STATE.StateWC1);
-    Serial.println(message);
-    sprintf(message, "WC2 | Sensor: %d State %d", STATE.SensWC2, STATE.StateWC2);
-    Serial.println(message);
-    // sprintf(message, "WC1 | Color: %d", GetColorNum(&col_wc1));
-    // Serial.println(message);
-    // sprintf(message, "WC2 | Color: %d", GetColorNum(&col_wc2));
-    // Serial.println(message);
+    if (HCONF.ADR == 1)
+    {
+      sprintf(message, "T1_OFS: %d T2_OFS: %d", HCONF.T1_offset, HCONF.T2_offset);
+      Serial.println(message);
+      sprintf(message, "WC1 | Sensor: %d State %d", STATE.SensWC1, STATE.StateWC1);
+      Serial.println(message);
+      sprintf(message, "WC2 | Sensor: %d State %d", STATE.SensWC2, STATE.StateWC2);
+      Serial.println(message);
+    }
 
     // Serial.printf("SN:");
     // Serial.println(CFG.sn);
@@ -457,6 +458,17 @@ void Send_GPSdata()
     itoa(HCONF.dsT2, buf_crc + strlen(buf_crc), DEC);
     strcat(buf_crc, "</temp2>\r\n");
   }
+
+  strcat(buf_crc, "<wc>");
+  if (HCONF.WCGS == 1)
+  {
+    itoa(STATE.StateWC1, buf_crc + strlen(buf_crc), DEC);
+  }
+  else
+  {
+    itoa(STATE.StateWC2, buf_crc + strlen(buf_crc), DEC);
+  }
+  strcat(buf_crc, "</wc>\r\n");
 
   crc = CRC16_mb(buf_crc, strlen(buf_crc));
 
@@ -1174,3 +1186,45 @@ unsigned int CRC16_mb(char *buf, int len)
   return crc;
 }
 //=========================================================================
+
+uint16_t calcCRC(char *str, uint32_t len)
+{
+  if (len < 53)
+    return 0xFFFF;
+
+  uint16_t crc = 0xffff;
+  const uint16_t poly = 0xa001;
+  uint32_t start_pos = 17;
+  uint32_t crc_end = len - 53; // cutting end tags
+
+  if (strstr(str, "gps_data"))
+  {
+    start_pos = 12;
+    crc_end = len - 38;
+  }
+
+  // BOM protection
+  if ((str[0] == 0xEF) && (str[1] == 0xBB) && (str[2] == 0xBF))
+  {
+    start_pos += 3;
+  }
+
+  for (int pos = start_pos; pos < crc_end; ++pos)
+  {
+    crc ^= str[pos];
+    for (int i = 8; i != 0; --i)
+    {
+      if ((crc & 0x0001) != 0)
+      {
+        crc >>= 1;
+        crc ^= poly;
+      }
+      else
+      {
+        crc >>= 1;
+      }
+    }
+  }
+
+  return crc;
+}
