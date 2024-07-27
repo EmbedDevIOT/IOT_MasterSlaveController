@@ -482,7 +482,7 @@ void Send_GPSdata()
   strcat(xml, "</gps_crc>\r\n");
   strcat(xml, "</gps_data>");
 
-  Serial2.println(xml);
+  Serial2.print(xml);
   Serial2.println();
 }
 //=========================================================================
@@ -1199,7 +1199,7 @@ uint16_t calcCRC(char *str, uint32_t len)
 
   if (strstr(str, "gps_data"))
   {
-    start_pos = 12;
+    start_pos = 12;//12
     crc_end = len - 38;
   }
 

@@ -105,11 +105,11 @@ bool parseBuffer(char *buffer, uint32_t length)
     double temp_speed = 0;
     int timezone = 0;
 
-    unsigned char sec = 0;   // 0..59
-    unsigned char min = 0;   // 0..59
-    unsigned char hour = 0;  // 0..23
-    unsigned char day = 0;   // 1..31
-    unsigned char month = 0; // 1..12
+    // unsigned char sec = 0;   // 0..59
+    // unsigned char min = 0;   // 0..59
+    // unsigned char hour = 0;  // 0..23
+    // unsigned char day = 0;   // 1..31
+    // unsigned char month = 0; // 1..12
     unsigned short year = 0; // 1..2999
     int c_speed;             // km/h
     std::string auxtext1;
@@ -154,10 +154,7 @@ bool parseBuffer(char *buffer, uint32_t length)
             Clock.second = (tmp % 100);
             Clock.minute = (tmp / 100) % 100;
             Clock.hour = (tmp / 10000);
-            Serial.printf("Time: %d:%d:%d", Clock.hour, Clock.minute, Clock.second);
-            // sec = (tmp % 100);
-            // min = (tmp / 100) % 100;
-            // hour = (tmp / 10000);
+            // Serial.printf("Time: %d:%d:%d", Clock.hour, Clock.minute, Clock.second);
         }
         else if (xmlBuf.tag == "date")
         {
@@ -165,11 +162,7 @@ bool parseBuffer(char *buffer, uint32_t length)
             Clock.date = tmp / 10000;
             Clock.month = (tmp / 100) % 100;
             Clock.year = 2000 + (tmp % 100); // 2000 is added cause yy
-            Serial.printf("Time: %d:%d:%d", Clock.date, Clock.month, Clock.year);
-
-            // day = tmp / 10000;
-            // month = (tmp / 100) % 100;
-            // year = 2000 + (tmp % 100); // 2000 is added cause yy
+            // Serial.printf("Time: %d:%d:%d", Clock.date, Clock.month, Clock.year);
         }
         else if (xmlBuf.tag == "lat")
         {
@@ -191,7 +184,6 @@ bool parseBuffer(char *buffer, uint32_t length)
             if (xmlBuf.value[0] != 'N')
             {
                 HCONF.dsT1 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-                // temperature_data.temp1 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
             }
         }
         else if (xmlBuf.tag == "temp2")
@@ -200,7 +192,6 @@ bool parseBuffer(char *buffer, uint32_t length)
             {
                 {
                     HCONF.dsT2 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-                    // temperature_data.temp2 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
                 }
             }
         }
@@ -215,10 +206,6 @@ bool parseBuffer(char *buffer, uint32_t length)
         else if (xmlBuf.tag == "gps_crc")
         {
             gps_new_crc = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 16));
-
-            Serial.println();
-            Serial.printf("GPS_CRC:");
-            Serial.println(gps_new_crc);
         }
     }
     return false;
@@ -233,11 +220,12 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.4.0";
-    CFG.fwdate = "26.07.2024";
+    CFG.fw = "0.4.1";
+    CFG.fwdate = "27.07.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
+    Serial2.print("\r\n\r\n"); // Clear RS485
 
     SystemInit();
 
@@ -246,10 +234,13 @@ void setup()
     digitalWrite(LED_ST, LOW);
     pinMode(LED_WiFi, OUTPUT);
     digitalWrite(LED_WiFi, LOW);
-
+    // WC sensor First init
     pinMode(WC1, INPUT_PULLUP);
     pinMode(WC2, INPUT_PULLUP);
-
+    STATE.SensWC1 = GetWCState(WC1);
+    STATE.SensWC2 = GetWCState(WC2);
+    SetColorWC();
+    // DIP SWITCH First init
     pinMode(SW1, INPUT_PULLUP);
     pinMode(SW2, INPUT_PULLUP);
 
@@ -289,6 +280,7 @@ void setup()
         digitalWrite(LED_ST, LOW);
         vTaskDelay(300 / portTICK_PERIOD_MS);
     }
+    // RS 485 ADR SET (PINOUT CONFIGURATION)
 
     // SPIFFS INIT
     if (!SPIFFS.begin(true))
@@ -310,10 +302,11 @@ void setup()
 
         ds18b20_1.begin();
         Serial.println(F("Sensor T1...Done"));
-        delay(20);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
         ds18b20_2.begin();
         Serial.println(F("Sensor T2...Done"));
-        delay(20);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+        GetDSData();
     }
 
     // I2C_Scanning();
@@ -420,7 +413,7 @@ void HandlerCore0(void *pvParameters)
             {
                 digitalWrite(LED_ST, HIGH);
                 testXML += (char)Serial2.read();
-                vTaskDelay(2 / portTICK_PERIOD_MS);
+                // vTaskDelay(1 / portTICK_PERIOD_MS);
                 recievedFlag = true;
                 digitalWrite(LED_ST, LOW);
             }
@@ -429,12 +422,14 @@ void HandlerCore0(void *pvParameters)
                 uint16_t calculated_crc = 0;
                 ptr = testXML.c_str();
 
-
                 // Добавить CRC
                 calculated_crc = calcCRC((char *)ptr, strlen(ptr));
 
-                // Serial.printf("CALC CRC: %04x \r\n", calculated_crc);
-                // Serial.printf("NEW CRC: %04x \r\n", gps_new_crc);
+                // Serial.printf(ptr);
+                // Serial.println();
+                Serial.printf("Lenght: %d \r\n", strlen(ptr));
+                Serial.printf("CALC CRC: %04x \r\n", calculated_crc);
+                Serial.printf("NEW CRC: %04x \r\n", gps_new_crc);
 
                 bool result = parseBuffer((char *)ptr, strlen(ptr));
 
@@ -479,7 +474,7 @@ void HandlerCore0(void *pvParameters)
             Tell_me_DoorState(STATE.StateWC1);
             STATE.DSTS1 = false;
         }
-
+        // Озвучка статуса туалета
         if (STATE.DSTS2)
         {
             Tell_me_DoorState(STATE.WC);
@@ -491,6 +486,7 @@ void HandlerCore0(void *pvParameters)
             Amplifier.setVolume(HCONF.volume);
             STATE.VolumeUPD = false;
         }
+
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
@@ -555,7 +551,6 @@ void HandlerCore1(void *pvParameters)
 // Core 1. 1000ms
 void HandlerTask500(void *pvParameters)
 {
-    // Serial2.print("\r\n\r\n"); // Костыль инита RS485
 
     Serial.print("Task: Sending RS485 data \r\n");
     Serial.print("T:1000ms Stack:12000 Core:");
@@ -721,6 +716,7 @@ void SendtoRS485()
 
             digitalWrite(LED_ST, HIGH);
             Send_ITdata(1);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
             digitalWrite(LED_ST, LOW);
         }
 
@@ -729,6 +725,7 @@ void SendtoRS485()
             digitalWrite(LED_ST, HIGH);
             Send_BSdata();
             vTaskDelay(100 / portTICK_PERIOD_MS);
+            Serial2.flush();
             digitalWrite(LED_ST, LOW);
             Send_GPSdata();
             vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -1436,7 +1433,7 @@ void ButtonHandler()
         // Click Button 3 Handling (DTS) WC1
         if (btn3.click())
         {
-            STATE.DSTS1 = true;
+            // STATE.DSTS1 = true;
         }
         // Click Button 4 Handling (DTS) WC2
         if (btn4.click())
