@@ -11,7 +11,6 @@
 #include <microDS3231.h>
 #include <ArduinoJson.h>
 #include <EncButton.h>
-// #include <AnalogButtons.h>
 // #include <ElegantOTA.h>
 
 #include <OneWire.h>
@@ -297,13 +296,5 @@ String GetMacAdr();
 void DebugInfo(void);
 void SystemFactoryReset(void);
 void ShowFlashSave(void);
-// void getTimeChar(char *array);
-// void getDateChar(char *array);
-// void Send_GPSdata();
-// void Send_ITdata(uint8_t adr);
-// void Send_BSdata();
-// void Send_BS_UserData(char *msg1, char *msg2);
-// unsigned int CRC16_mb(char *buf, int len);
-// uint16_t calcCRC(char *str, uint32_t len);
 //============================================================================
 #endif // _Config_H
