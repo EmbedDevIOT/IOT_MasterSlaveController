@@ -1,10 +1,10 @@
 #include "Config.h"
 
-#include "WF.h"
+#include "rs485.h"
+
 #include "FileConfig.h"
+#include "WF.h"
 #include "HTTP.h"
-#include "keyboard.h"
-#include "SharedParserFunctions.hpp"
 
 #define DEBUG // Debug control ON
 //======================================================================
@@ -18,7 +18,6 @@ String testXML;
 
 uint8_t sec = 0;
 boolean recievedFlag;
-uint16_t gps_new_crc;
 
 uint8_t sec_cnt = 0;
 uint8_t menu = 0;     // State menu (levels)
@@ -36,6 +35,8 @@ TaskHandle_t TaskCore1_Gen;
 TaskHandle_t TaskCore0_TSH;
 TaskHandle_t TaskCore1_500ms;
 
+SemaphoreHandle_t i2c_mutex;
+
 Audio Amplifier;
 MicroDS3231 RTC;
 
@@ -51,7 +52,6 @@ Button btn2(6, INPUT, LOW);
 Button btn3(5, INPUT, LOW);
 Button btn4(4, INPUT, LOW);
 Button btn5(3, INPUT, LOW);
-
 //=======================================================================
 
 //============================== STRUCTURES =============================
@@ -79,137 +79,15 @@ void HandlerCore0(void *pvParameters);
 void HandlerCore1(void *pvParameters);
 void HandlerTask500(void *pvParameters);
 void HandlerTask1Wire(void *pvParameters);
-bool parseBuffer(char *buffer, uint32_t length);
+
 void ButtonHandler();
 void SendtoRS485();
 void GetDSData(void);
-bool GetWCState(uint8_t num);
-void SetColorWC();
-void UART_Recieve_Data();
 void Tell_me_CurrentTime();
 void Tell_me_CurrentData();
 void Tell_me_DoorState(bool state);
 //=======================================================================
-//=======================================================================
 
-//=======================================================================
-//=======================================================================
-bool parseBuffer(char *buffer, uint32_t length)
-{
-    Buf_t xmlBuf;
-    bool result;
-    bool addressMatched = false;
-    bool addressTagsAdded = false;
-
-    int tmp = 0;
-    double temp_speed = 0;
-    int timezone = 0;
-
-    // unsigned char sec = 0;   // 0..59
-    // unsigned char min = 0;   // 0..59
-    // unsigned char hour = 0;  // 0..23
-    // unsigned char day = 0;   // 1..31
-    // unsigned char month = 0; // 1..12
-    unsigned short year = 0; // 1..2999
-    int c_speed;             // km/h
-    std::string auxtext1;
-    // std::string crc;
-
-    auto bufferEnd = buffer + length;
-
-    while (reinterpret_cast<uint32_t>(buffer) < reinterpret_cast<uint32_t>(bufferEnd))
-    {
-        // Get line from buffer
-        if (!extractLineAndParseXml(&buffer, bufferEnd, xmlBuf))
-        {
-            return false;
-        }
-
-        if (xmlBuf.tag == "gps_data")
-        {
-            // general tag
-            continue;
-        }
-
-        // Stop processing on the end tag
-        if (xmlBuf.end_tag == "gps_data")
-        {
-            if (2020 <= year && year <= 2060)
-            {
-                // clock.SetFullTimeGPS(hour, min, sec, timezone, day, month, year);
-                return true;
-            }
-            else
-                return false;
-        }
-
-        // Here starts specific device parameters parsing
-        if (xmlBuf.tag == "gmt")
-        {
-            CFG.gmt = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 10));
-        }
-        else if (xmlBuf.tag == "time")
-        {
-            tmp = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-            Clock.second = (tmp % 100);
-            Clock.minute = (tmp / 100) % 100;
-            Clock.hour = (tmp / 10000);
-            // Serial.printf("Time: %d:%d:%d", Clock.hour, Clock.minute, Clock.second);
-        }
-        else if (xmlBuf.tag == "date")
-        {
-            tmp = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-            Clock.date = tmp / 10000;
-            Clock.month = (tmp / 100) % 100;
-            Clock.year = 2000 + (tmp % 100); // 2000 is added cause yy
-            // Serial.printf("Time: %d:%d:%d", Clock.date, Clock.month, Clock.year);
-        }
-        else if (xmlBuf.tag == "lat")
-        {
-            // skip
-        }
-        else if (xmlBuf.tag == "lon")
-        {
-            // skip
-        }
-        else if (xmlBuf.tag == "speed")
-        {
-            temp_speed = strtod(xmlBuf.value.c_str(), NULL);
-
-            c_speed = (int)(temp_speed * 1.852);
-        }
-        else if (xmlBuf.tag == "temp1")
-        {
-
-            if (xmlBuf.value[0] != 'N')
-            {
-                HCONF.dsT1 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-            }
-        }
-        else if (xmlBuf.tag == "temp2")
-        {
-            if (xmlBuf.value[0] != 'N')
-            {
-                {
-                    HCONF.dsT2 = static_cast<int>(strtoul(xmlBuf.value.c_str(), nullptr, 10));
-                }
-            }
-        }
-        else if (xmlBuf.tag == "auxtext1")
-        {
-            auxtext1 = xmlBuf.value;
-        }
-        else if (xmlBuf.tag == "wc")
-        {
-            STATE.WC = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 10));
-        }
-        else if (xmlBuf.tag == "gps_crc")
-        {
-            gps_new_crc = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 16));
-        }
-    }
-    return false;
-}
 //=======================================================================
 static uint8_t DS_dim(uint8_t i)
 {
@@ -220,16 +98,16 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.4.1";
-    CFG.fwdate = "27.07.2024";
+    CFG.fw = "0.4.5";
+    CFG.fwdate = "28.07.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
     Serial2.print("\r\n\r\n"); // Clear RS485
 
+    // System Structures Init
     SystemInit();
-
-    // GPIO init
+    // GPIO pin init
     pinMode(LED_ST, OUTPUT);
     digitalWrite(LED_ST, LOW);
     pinMode(LED_WiFi, OUTPUT);
@@ -240,49 +118,21 @@ void setup()
     STATE.SensWC1 = GetWCState(WC1);
     STATE.SensWC2 = GetWCState(WC2);
     SetColorWC();
-    // DIP SWITCH First init
+
+    // DIP SWITCH pins init
     pinMode(SW1, INPUT_PULLUP);
     pinMode(SW2, INPUT_PULLUP);
+    RS485_ReadADR();
 
-    // RS 485 ADR SET (PINOUT CONFIGURATION)
-    if (digitalRead(SW1) && digitalRead(SW2))
+    // RTC init
+    RTC.begin();
+    if (RTC.lostPower())
     {
-        HCONF.ADR = 0;
+        RTC.setTime(COMPILE_TIME);
     }
-    else if (!digitalRead(SW1) && digitalRead(SW2))
-    {
-        HCONF.ADR = 1;
-        pinMode(DE_RE, OUTPUT);
-        digitalWrite(DE_RE, HIGH);
-    }
-    else if (digitalRead(SW1) && !digitalRead(SW2))
-    {
-        HCONF.ADR = 2;
-        pinMode(DE_RE, OUTPUT);
-        digitalWrite(DE_RE, LOW);
-    }
-    else if (!digitalRead(SW1) && !digitalRead(SW2))
-    {
-        HCONF.ADR = 3;
-    }
-
-    Serial.print("\r\n");
-    Serial.println(F("##############  RS CONFIGURATION  ###############"));
-    Serial.printf("ADR: %d \r\n", HCONF.ADR);
-    Serial.println(F("#################################################"));
-    Serial.print("\r\n");
-
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-    for (uint8_t i = 1; i <= HCONF.ADR; i++)
-    {
-        digitalWrite(LED_ST, HIGH);
-        vTaskDelay(150 / portTICK_PERIOD_MS);
-        digitalWrite(LED_ST, LOW);
-        vTaskDelay(300 / portTICK_PERIOD_MS);
-    }
-    // RS 485 ADR SET (PINOUT CONFIGURATION)
-
-    // SPIFFS INIT
+    Clock = RTC.getTime();
+    Serial.println(F("RTC...Done"));
+    // SPIFFS 
     if (!SPIFFS.begin(true))
     {
         Serial.println("An Error has occurred while mounting SPIFFS");
@@ -291,15 +141,6 @@ void setup()
     // ADR = 1
     if (HCONF.ADR == 1)
     {
-        // RTC INIT
-        RTC.begin();
-        if (RTC.lostPower())
-        {
-            RTC.setTime(COMPILE_TIME);
-        }
-        Clock = RTC.getTime();
-        Serial.println(F("RTC...Done"));
-
         ds18b20_1.begin();
         Serial.println(F("Sensor T1...Done"));
         vTaskDelay(20 / portTICK_PERIOD_MS);
@@ -408,7 +249,6 @@ void HandlerCore0(void *pvParameters)
 
         if (HCONF.ADR == 2)
         {
-            // UART_Recieve_Data();
             while (Serial2.available() > 0)
             {
                 digitalWrite(LED_ST, HIGH);
@@ -422,16 +262,13 @@ void HandlerCore0(void *pvParameters)
                 uint16_t calculated_crc = 0;
                 ptr = testXML.c_str();
 
-                // Добавить CRC
-                calculated_crc = calcCRC((char *)ptr, strlen(ptr));
-
+                // DEBUG
                 // Serial.printf(ptr);
                 // Serial.println();
-                Serial.printf("Lenght: %d \r\n", strlen(ptr));
-                Serial.printf("CALC CRC: %04x \r\n", calculated_crc);
-                Serial.printf("NEW CRC: %04x \r\n", gps_new_crc);
+                // Serial.printf("Lenght: %d \r\n", strlen(ptr));
 
-                bool result = parseBuffer((char *)ptr, strlen(ptr));
+                calculated_crc = calcCRC((char *)ptr, strlen(ptr));
+                bool result = parseBuffer((char *)ptr, calculated_crc, strlen(ptr));
 
                 recievedFlag = false;
                 testXML.clear();
@@ -486,7 +323,6 @@ void HandlerCore0(void *pvParameters)
             Amplifier.setVolume(HCONF.volume);
             STATE.VolumeUPD = false;
         }
-
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
@@ -503,27 +339,24 @@ void HandlerTask1Wire(void *pvParameters)
         STATE.SensWC2 = GetWCState(WC2);
         SetColorWC();
 
-        if (HCONF.ADR == 1)
+        if (sec < 10)
         {
-            if (sec < 10)
-            {
-                sec++;
+            sec++;
 
-                if ((STATE.WiFiEnable) && (sec % 2 == 0))
-                {
-                    digitalWrite(LED_WiFi, HIGH);
-                    vTaskDelay(100 / portTICK_PERIOD_MS);
-                    digitalWrite(LED_WiFi, LOW);
-                }
-            }
-            else
+            if ((STATE.WiFiEnable) && (sec % 2 == 0))
             {
-                GetDSData();
-                sec = 1;
+                digitalWrite(LED_WiFi, HIGH);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                digitalWrite(LED_WiFi, LOW);
             }
-
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
+        else
+        {
+            GetDSData();
+            sec = 1;
+        }
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -535,13 +368,14 @@ void HandlerCore1(void *pvParameters)
     Serial.println(xPortGetCoreID());
     for (;;)
     {
-        if (HCONF.ADR == 1)
+        if (HCONF.ADR == 1 && menu != IDLE)
         {
-            if (STATE.I2C_Block == false)
-                Clock = RTC.getTime();
-            if (menu != IDLE)
-                STATE.menu_tmr++;
+            STATE.menu_tmr++;
         }
+
+        if (STATE.I2C_Block == false)
+            Clock = RTC.getTime();
+
         DebugInfo();
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -558,7 +392,6 @@ void HandlerTask500(void *pvParameters)
 
     for (;;)
     {
-
         if (HCONF.ADR == 1)
         {
             sec_cnt++;
@@ -569,120 +402,6 @@ void HandlerTask500(void *pvParameters)
 }
 //=======================================================================
 
-//=========================================================================
-// Get WC Door State
-bool GetWCState(uint8_t num)
-{
-    boolean state = false;
-    switch (num)
-    {
-    case WC1:
-        state = digitalRead(WC1);
-        break;
-    case WC2:
-        state = digitalRead(WC2);
-        break;
-
-    default:
-        break;
-    }
-    HCONF.WCSS == SENSOR_OPEN ? state : state = !state;
-    return state;
-}
-//=========================================================================
-void SetColorWC()
-{
-    switch (HCONF.WCL)
-    {
-    case NORMAL:
-        if (STATE.SensWC1)
-        {
-            STATE.StateWC1 = true;
-            ColorSet(&col_wc1, RED);
-        }
-        else
-        {
-            STATE.StateWC1 = false;
-            ColorSet(&col_wc1, GREEN);
-        }
-
-        if (STATE.SensWC2)
-        {
-            STATE.StateWC2 = true;
-            ColorSet(&col_wc2, RED);
-        }
-        else
-        {
-            STATE.StateWC2 = false;
-            ColorSet(&col_wc2, GREEN);
-        }
-        break;
-
-    case REVERSE:
-        if (STATE.SensWC1)
-        {
-            STATE.StateWC2 = true;
-            ColorSet(&col_wc2, RED);
-        }
-        else
-        {
-            STATE.StateWC2 = false;
-            ColorSet(&col_wc2, GREEN);
-        }
-
-        if (STATE.SensWC2)
-        {
-            STATE.StateWC1 = true;
-            ColorSet(&col_wc1, RED);
-        }
-        else
-        {
-            STATE.StateWC1 = false;
-            ColorSet(&col_wc1, GREEN);
-        }
-        break;
-
-    case ONE_HALL:
-        if (HCONF.WCSS)
-        {
-            if (STATE.SensWC1 && STATE.SensWC2)
-            {
-                STATE.StateWC1 = true;
-                STATE.StateWC2 = true;
-                ColorSet(&col_wc1, RED);
-                ColorSet(&col_wc2, RED);
-            }
-            else
-            {
-                STATE.StateWC1 = false;
-                STATE.StateWC2 = false;
-                ColorSet(&col_wc1, GREEN);
-                ColorSet(&col_wc2, GREEN);
-            }
-        }
-        else
-        {
-            if (!STATE.SensWC1 && !STATE.SensWC2)
-            {
-                STATE.StateWC1 = false;
-                STATE.StateWC2 = false;
-                ColorSet(&col_wc1, GREEN);
-                ColorSet(&col_wc2, GREEN);
-            }
-            else
-            {
-                STATE.StateWC1 = true;
-                STATE.StateWC2 = true;
-                ColorSet(&col_wc1, RED);
-                ColorSet(&col_wc2, RED);
-            }
-        }
-        break;
-
-    default:
-        break;
-    }
-}
 //=========================================================================
 // Get Data from DS18B20 Sensor
 void GetDSData()
@@ -734,7 +453,7 @@ void SendtoRS485()
     }
 }
 //=========================================================================
-//=========================================================================
+
 //=================== Keyboard buttons Handler =============================
 void ButtonHandler()
 {
@@ -1450,6 +1169,7 @@ void ButtonHandler()
 }
 //=========================================================================
 
+//=========================================================================
 void UART_Recieve_Data()
 {
     if (Serial2.available())
@@ -1501,7 +1221,9 @@ void UART_Recieve_Data()
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
+//=========================================================================
 
+//=========================================================================
 void Tell_me_CurrentTime()
 {
     // String buf = "/sound/S/curtime.mp3";
@@ -1567,7 +1289,9 @@ void Tell_me_CurrentTime()
     }
     buf.clear();
 }
+//=========================================================================
 
+//=========================================================================
 void Tell_me_DoorState(bool state)
 {
     String buf;
@@ -1602,7 +1326,9 @@ void Tell_me_DoorState(bool state)
         buf.clear();
     }
 }
+//=========================================================================
 
+//=========================================================================
 void Tell_me_CurrentData()
 {
     String buf;
@@ -1755,3 +1481,4 @@ void Tell_me_CurrentData()
     }
     buf.clear();
 }
+//=========================================================================

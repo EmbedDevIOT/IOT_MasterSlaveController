@@ -286,6 +286,8 @@ extern Flag STATE;
 void ColorWrite(char *buf, struct color *C);
 void ColorSet(struct color *CS, uint8_t _color);
 int GetColorNum(struct color *C);
+bool GetWCState(uint8_t num);
+void SetColorWC(void);
 void UserPresetInit(void);
 void SystemInit(void);     //  System Initialisation (variables and structure)
 void I2C_Scanning(void);
@@ -295,13 +297,13 @@ String GetMacAdr();
 void DebugInfo(void);
 void SystemFactoryReset(void);
 void ShowFlashSave(void);
-void getTimeChar(char *array);
-void getDateChar(char *array);
-void Send_GPSdata();
-void Send_ITdata(uint8_t adr);
-void Send_BSdata();
-void Send_BS_UserData(char *msg1, char *msg2);
-unsigned int CRC16_mb(char *buf, int len);
-uint16_t calcCRC(char *str, uint32_t len);
+// void getTimeChar(char *array);
+// void getDateChar(char *array);
+// void Send_GPSdata();
+// void Send_ITdata(uint8_t adr);
+// void Send_BSdata();
+// void Send_BS_UserData(char *msg1, char *msg2);
+// unsigned int CRC16_mb(char *buf, int len);
+// uint16_t calcCRC(char *str, uint32_t len);
 //============================================================================
 #endif // _Config_H
