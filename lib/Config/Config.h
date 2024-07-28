@@ -241,7 +241,7 @@ struct HardwareConfig
   int8_t WCL = 0;           // WC_STATE_LOGIQ
   uint8_t WCGS = 0;         // WC_GET_SIGNAL
   uint8_t WCSS = 0;         // WC_SENSOR_SIGNAL
-  uint8_t volume = 50;      // Volume  
+  uint8_t volume = 50;      // Volume  1...21
   int8_t bright = 70;       // Led Brightness 
   float dsT1 = 0.0;         // Temperature T1 
   int8_t T1_offset = 0;     // Temperature Offset T1 sensor

@@ -98,7 +98,7 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.4.5";
+    CFG.fw = "0.4.6";
     CFG.fwdate = "28.07.2024";
 
     Serial.begin(UARTSpeed);
@@ -132,7 +132,7 @@ void setup()
     }
     Clock = RTC.getTime();
     Serial.println(F("RTC...Done"));
-    // SPIFFS 
+    // SPIFFS
     if (!SPIFFS.begin(true))
     {
         Serial.println("An Error has occurred while mounting SPIFFS");
@@ -172,6 +172,7 @@ void setup()
     Amplifier.setVolume(HCONF.volume);
     Serial.println(F("DAC PCM Amplifier...Done"));
 
+    i2c_mutex = xSemaphoreCreateMutex();
     // Task: I2S Audio Handler | MenuTimer Exit
     xTaskCreatePinnedToCore(
         HandlerCore0,
@@ -373,8 +374,10 @@ void HandlerCore1(void *pvParameters)
             STATE.menu_tmr++;
         }
 
-        if (STATE.I2C_Block == false)
+        xSemaphoreTake(i2c_mutex, portMAX_DELAY);
+        // if (STATE.I2C_Block == false)
             Clock = RTC.getTime();
+        xSemaphoreGive(i2c_mutex);
 
         DebugInfo();
 
@@ -460,6 +463,7 @@ void ButtonHandler()
     switch (HCONF.ADR)
     {
     case 1:
+        // xSemaphoreTake(i2c_mutex, portMAX_DELAY);
         STATE.I2C_Block = true;
 
         btn1.tick();
@@ -737,6 +741,7 @@ void ButtonHandler()
                 Send_BS_UserData(name_1, name_2);
                 break;
             case _MIN:
+                Send_GPSdata();
                 Serial.printf("Minute:\r\n");
                 memset(name_1, 0, 25);
                 memset(name_2, 0, 25);
@@ -979,7 +984,7 @@ void ButtonHandler()
                 RTC.setTime(Clock);
                 memset(name_2, 0, 25);
                 sprintf(name_2, "%d", hour);
-                Serial.printf("HOUR: %c\r\n", name_2);
+                Serial.printf(name_2);
                 Send_BS_UserData(name_1, name_2);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Serial.printf("Hour: %d \n\r", Clock.hour);
@@ -1160,6 +1165,7 @@ void ButtonHandler()
             STATE.DSTS2 = true;
         }
         STATE.I2C_Block = false;
+        // xSemaphoreGive(i2c_mutex);
         break;
     case 3:
         break;

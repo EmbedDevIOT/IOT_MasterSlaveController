@@ -2,6 +2,8 @@
 
 uint16_t gps_new_crc;
 
+extern SemaphoreHandle_t i2c_mutex;
+
 //=======================================================================
 void RS485_ReadADR()
 {
@@ -122,13 +124,20 @@ bool parseBuffer(char *buffer, uint16_t crc, uint32_t length)
 
                     int timGMT = getTimeGMT(buff.hour, buff.timezone);
 
+                    xSemaphoreTake(i2c_mutex, portMAX_DELAY);
                     RTC.setTime(buff.sec, buff.min, timGMT,
                                 buff.date, buff.month, buff.year);
+                    xSemaphoreGive(i2c_mutex);
+
                     HCONF.dsT1 = buff.ds1;
                     HCONF.dsT2 = buff.ds2;
                     STATE.WC = buff.wc;
                     CFG.gmt = buff.timezone;
-                    HCONF.volume = buff.vol;
+                    if (HCONF.volume != buff.vol)
+                    {
+                        HCONF.volume = buff.vol;
+                        STATE.VolumeUPD = true;
+                    }
                 }
                 else
                 {
@@ -193,10 +202,10 @@ bool parseBuffer(char *buffer, uint16_t crc, uint32_t length)
                 }
             }
         }
-        else if (xmlBuf.tag == "auxtext1")
-        {
-            auxtext1 = xmlBuf.value;
-        }
+        // else if (xmlBuf.tag == "auxtext1")
+        // {
+        //     auxtext1 = xmlBuf.value;
+        // }
         else if (xmlBuf.tag == "wc")
         {
             buff.wc = static_cast<int>(strtol(xmlBuf.value.c_str(), nullptr, 10));
