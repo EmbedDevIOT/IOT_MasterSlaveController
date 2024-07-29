@@ -224,6 +224,46 @@ void SetColorWC()
 }
 //=========================================================================
 
+//=========================================================================
+boolean SerialNumConfig()
+{
+  bool sn = false;
+  if (CFG.sn == 0)
+  {
+    Serial.println("Serial number: FALL");
+    Serial.println("Please enter SN");
+    sn = true;
+  }
+
+  while (sn)
+  {
+    if (Serial.available())
+    {
+
+      digitalWrite(LED_ST, HIGH);
+
+      String r = Serial.readString();
+      bool block_st = false;
+      r.trim();
+      CFG.sn = r.toInt();
+
+      digitalWrite(LED_ST, LOW);
+
+      if (CFG.sn >= 1)
+      {
+        Serial.printf("Serial number: %d DONE \r\n", CFG.sn);
+        sn = false;
+        return true;
+      }
+
+      log_i("free heap=%i", ESP.getFreeHeap());
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+  }
+  return false;
+}
+//=========================================================================
+
 //=======================================================================
 void UserPresetInit()
 {
@@ -426,7 +466,7 @@ void SystemFactoryReset()
   CFG.MK4 = 0;
 
   HCONF.bright = 90;
-  HCONF.volume = 12;
+  HCONF.volume = 13;
   HCONF.T1_offset = 0;
   HCONF.T2_offset = 0;
   HCONF.WCL = NORMAL;

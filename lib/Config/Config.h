@@ -20,6 +20,7 @@
 #define RSSpeed 115200
 
 #define WiFi_
+#define MAX_MENU  12
 
 #define WiFiTimeON 10
 #define Client 0
@@ -78,6 +79,8 @@ extern DateTime Clock;
 //=======================================================================
 
 //========================== ENUMERATION ================================
+  
+// MENU 
 enum menu
 {
   IDLE = 0,
@@ -89,6 +92,7 @@ enum menu
   _MONTH,
   _YEAR,
   _BRIGHT,
+  _VOL,
   _WCL,
   _WCSS,
   _WiFi
@@ -287,6 +291,7 @@ void ColorSet(struct color *CS, uint8_t _color);
 int GetColorNum(struct color *C);
 bool GetWCState(uint8_t num);
 void SetColorWC(void);
+boolean SerialNumConfig(void);
 void UserPresetInit(void);
 void SystemInit(void);     //  System Initialisation (variables and structure)
 void I2C_Scanning(void);

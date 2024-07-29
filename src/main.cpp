@@ -98,8 +98,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.4.6";
-    CFG.fwdate = "28.07.2024";
+    CFG.fw = "0.4.7";
+    CFG.fwdate = "29.07.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
@@ -157,6 +157,11 @@ void setup()
 
     LoadConfig();         // Load configuration from config.json files
     ShowLoadJSONConfig(); // Show load configuration
+
+    if (SerialNumConfig())
+    {
+        SaveConfig();
+    }
 
     if ((HCONF.ADR == 1) && (STATE.WiFiEnable))
     {
@@ -376,7 +381,7 @@ void HandlerCore1(void *pvParameters)
 
         xSemaphoreTake(i2c_mutex, portMAX_DELAY);
         // if (STATE.I2C_Block == false)
-            Clock = RTC.getTime();
+        Clock = RTC.getTime();
         xSemaphoreGive(i2c_mutex);
 
         DebugInfo();
@@ -508,6 +513,7 @@ void ButtonHandler()
                     Send_BSdata();
                 }
                 break;
+
             // CarNUM (--) to General MENU  (change TOP zone)
             case _CAR_NUM:
                 UserText.carnum > 0 ? UserText.carnum-- : UserText.carnum = 99;
@@ -517,6 +523,7 @@ void ButtonHandler()
                 Send_BS_UserData(name_1, name_2);
                 SaveConfig();
                 break;
+
             // GMT --
             case _GMT:
                 if (CFG.gmt > -12 && CFG.gmt <= 12)
@@ -534,6 +541,7 @@ void ButtonHandler()
                 SaveConfig();
                 Serial.printf("GMT: %d \r\n", CFG.gmt);
                 break;
+
             // MIN --
             case _MIN:
                 min = Clock.minute;
@@ -549,6 +557,7 @@ void ButtonHandler()
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Send_GPSdata();
                 break;
+
             // Hour --
             case _HOUR:
                 hour = Clock.hour;
@@ -564,6 +573,7 @@ void ButtonHandler()
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Send_GPSdata();
                 break;
+
             // Day --
             case _DAY:
                 data = Clock.date;
@@ -583,6 +593,7 @@ void ButtonHandler()
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Send_GPSdata();
                 break;
+
             // MONTH --
             case _MONTH:
                 month = Clock.month;
@@ -600,6 +611,7 @@ void ButtonHandler()
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Send_GPSdata();
                 break;
+
             // Year --
             case _YEAR:
                 year = Clock.year;
@@ -614,6 +626,7 @@ void ButtonHandler()
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 Send_GPSdata();
                 break;
+
             // Brightness --
             case _BRIGHT:
 
@@ -625,6 +638,36 @@ void ButtonHandler()
                 sprintf(name_2, "%d", HCONF.bright);
                 Send_BS_UserData(name_1, name_2);
                 break;
+
+            // Volume control
+            case _VOL:
+                memset(name_2, 0, 25);
+                HCONF.volume > 5 ? HCONF.volume -= 4 : HCONF.volume = 21;
+                Serial.printf("VOL: %d\r\n ", HCONF.volume);
+
+                switch (HCONF.volume)
+                {
+                case 5:
+                    sprintf(name_2, "1");
+                    break;
+                case 9:
+                    sprintf(name_2, "2");
+                    break;
+                case 13:
+                    sprintf(name_2, "3");
+                    break;
+                case 17:
+                    sprintf(name_2, "4");
+                    break;
+                case 21:
+                    sprintf(name_2, "5");
+                    break;
+                default:
+                    break;
+                }
+                Send_BS_UserData(name_1, name_2);
+                break;
+
             // WC Signal State Logiq
             case _WCL:
                 (HCONF.WCL > 0 && HCONF.WCL <= 2) ? HCONF.WCL -= 1 : HCONF.WCL = 2;
@@ -666,6 +709,7 @@ void ButtonHandler()
                 SaveConfig();
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             // WiFI ON / OFF
             case _WiFi:
                 if (STATE.WiFiEnable)
@@ -699,11 +743,11 @@ void ButtonHandler()
         // Click Button 3 Handling (Check and Select level menu)
         if (btn3.click())
         {
-            Serial.printf(" BTN 3 Click \r\n");
+            Serial.printf("BTN 3 Click \r\n");
             STATE.menu_tmr = 0; // timer menu reset
             menu += 1;
 
-            if (menu <= 11)
+            if (menu <= MAX_MENU)
             {
                 STATE.DUPDBlock = true;
             }
@@ -724,7 +768,8 @@ void ButtonHandler()
                 sprintf(name_2, "%d", UserText.carnum);
                 Send_BS_UserData(name_1, name_2);
                 break;
-                // Min --
+
+            // Min --
             case _GMT:
                 Serial.printf("GMT:\r\n");
                 memset(name_1, 0, 25);
@@ -740,8 +785,9 @@ void ButtonHandler()
                 }
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             case _MIN:
-                Send_GPSdata();
+                // Send_GPSdata();
                 Serial.printf("Minute:\r\n");
                 memset(name_1, 0, 25);
                 memset(name_2, 0, 25);
@@ -750,6 +796,7 @@ void ButtonHandler()
                 Serial.printf("Minute: %c \r\n", name_2);
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             // Hour --
             case _HOUR:
                 Serial.printf("Hour:\r\n");
@@ -760,6 +807,7 @@ void ButtonHandler()
                 Serial.printf("Час: %c\r\n", name_2);
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             // Day --
             case _DAY:
                 Serial.printf("Day:\r\n");
@@ -769,6 +817,7 @@ void ButtonHandler()
                 sprintf(name_2, "%d", Clock.date);
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             // MONTH --
             case _MONTH:
                 Serial.printf("Month:\r\n");
@@ -778,6 +827,7 @@ void ButtonHandler()
                 sprintf(name_2, "%d", Clock.month);
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             // Year --
             case _YEAR:
                 Serial.printf("Year:\r\n");
@@ -787,6 +837,7 @@ void ButtonHandler()
                 sprintf(name_2, "%d", Clock.year);
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             // Brightness --
             case _BRIGHT:
                 old_bright = HCONF.bright;
@@ -797,6 +848,36 @@ void ButtonHandler()
                 sprintf(name_2, "%02d", HCONF.bright);
                 Send_BS_UserData(name_1, name_2);
                 break;
+
+            // Volume Control
+            case _VOL:
+                Serial.printf("Volume Conrol:\r\n");
+                memset(name_1, 0, 25);
+                memset(name_2, 0, 25);
+                strcat(name_1, "Громкость");
+                switch (HCONF.volume)
+                {
+                case 5:
+                    sprintf(name_2, "1");
+                    break;
+                case 9:
+                    sprintf(name_2, "2");
+                    break;
+                case 13:
+                    sprintf(name_2, "3");
+                    break;
+                case 17:
+                    sprintf(name_2, "4");
+                    break;
+                case 21:
+                    sprintf(name_2, "5");
+                    break;
+                default:
+                    break;
+                }
+                Send_BS_UserData(name_1, name_2);
+                break;
+
             // WC Signal State Logiq
             case _WCL:
                 // Saving if NEW_BRIGHT != OLD
@@ -850,6 +931,7 @@ void ButtonHandler()
                 }
                 Send_BS_UserData(name_1, name_2);
                 break;
+
             // WiFI ON / OFF
             case _WiFi:
                 Serial.printf("WiFI Conrol:\r\n");
@@ -915,7 +997,7 @@ void ButtonHandler()
         // Click Button 4 Handling (+)
         if (btn4.click())
         {
-            Serial.printf(" BTN 4 Click \r\n");
+            Serial.printf("BTN 4 Click \r\n");
             int min, hour, data, month, year;
 
             STATE.menu_tmr = 0; // timer menu reset
@@ -1055,6 +1137,35 @@ void ButtonHandler()
                 Send_BS_UserData(name_1, name_2);
                 break;
 
+                // Volume Control
+            case _VOL:
+                memset(name_2, 0, 25);
+                HCONF.volume < 21 ? HCONF.volume += 4 : HCONF.volume = 5;
+                Serial.printf("VOL: %d\r\n ", HCONF.volume);
+
+                switch (HCONF.volume)
+                {
+                case 5:
+                    sprintf(name_2, "1");
+                    break;
+                case 9:
+                    sprintf(name_2, "2");
+                    break;
+                case 13:
+                    sprintf(name_2, "3");
+                    break;
+                case 17:
+                    sprintf(name_2, "4");
+                    break;
+                case 21:
+                    sprintf(name_2, "5");
+                    break;
+                default:
+                    break;
+                }
+                Send_BS_UserData(name_1, name_2);
+                break;
+
             // WC Signal State Logiq
             case _WCL:
                 (HCONF.WCL >= 0 && HCONF.WCL < 2) ? HCONF.WCL += 1 : HCONF.WCL = 0;
@@ -1097,7 +1208,6 @@ void ButtonHandler()
 
             // WiFI ON / OFF
             case _WiFi:
-
                 if (STATE.WiFiEnable)
                 {
                     STATE.WiFiEnable = false;
