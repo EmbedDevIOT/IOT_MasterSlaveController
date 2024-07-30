@@ -98,11 +98,13 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.4.7";
-    CFG.fwdate = "29.07.2024";
+    CFG.fw = "0.5.0";
+    CFG.fwdate = "30.07.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
+    Serial2.print("\r\n\r\n"); // Clear RS485
+    vTaskDelay(20 / portTICK_PERIOD_MS);
     Serial2.print("\r\n\r\n"); // Clear RS485
 
     // System Structures Init
@@ -220,7 +222,7 @@ void setup()
         xTaskCreatePinnedToCore(
             HandlerTask500,
             "TaskCore1_500ms",
-            16384, // 12000
+            32768, // 16384
             NULL,
             1,
             &TaskCore1_500ms,
@@ -393,7 +395,7 @@ void HandlerCore1(void *pvParameters)
 // Core 1. 1000ms
 void HandlerTask500(void *pvParameters)
 {
-
+    Serial2.print("\r\n\r\n"); // Clear RS485
     Serial.print("Task: Sending RS485 data \r\n");
     Serial.print("T:1000ms Stack:12000 Core:");
     Serial.println(xPortGetCoreID());
