@@ -780,7 +780,7 @@ void Send_ITdata(uint8_t adr)
 
     //========= adress 3 START=================
     strcat(buf_crc, "<adr id=\"3\">\r\n");
-    strcat(buf_crc, "<cabin_mode>0</cabin_mode>\r\n");
+    strcat(buf_crc, "<cabin_mode>1</cabin_mode>\r\n");
     strcat(buf_crc, "<TsizeDx>\r\n");
     strcat(buf_crc, "<X>64</X>\r\n");
     strcat(buf_crc, "<Y>32</Y>\r\n");
@@ -836,13 +836,13 @@ void Send_ITdata(uint8_t adr)
     //=============== ZONE 2 ================
     strcat(buf_crc, "<zone id=\"2\">\r\n");
     strcat(buf_crc, "<startX>1</startX>\r\n");
-    strcat(buf_crc, "<startY>17</startY>\r\n");
+    strcat(buf_crc, "<startY>16</startY>\r\n");
     strcat(buf_crc, "<size>\r\n");
     strcat(buf_crc, "<X>64</X>\r\n");
     strcat(buf_crc, "<Y>8</Y>\r\n");
     strcat(buf_crc, "</size>\r\n");
     strcat(buf_crc, "<color>\r\n");
-    // ColorWrite(buf_crc, &col_wc1);
+    ColorWrite(buf_crc, &col_wc1);
     strcat(buf_crc, "</color>\r\n");
     strcat(buf_crc, "<bgcolor>\r\n");
     strcat(buf_crc, "<R>0</R>\r\n");
@@ -1092,7 +1092,7 @@ void Send_BSdata()
     strcat(buf, "</color_route>\r\n");
     // strcat(buf, "<color_speed>FF0000");
     // strcat(buf, "</color_speed>\r\n");
-    // strcat(buf, "<route_name>Туалет");
+    strcat(buf, "<route_name>Туалет");
     // if (UserText.hide_t == false)
     // {
     //     strcat(buf, UserText.carname);
@@ -1103,9 +1103,9 @@ void Send_BSdata()
     // {
     //     strcat(buf, UserText.carname);
     // }
-    // strcat(buf, "</route_name>\r\n");
-    strcat(buf, "<text_bs>Туалет");
-    strcat(buf, "</text_bs>\r\n");
+    strcat(buf, "</route_name>\r\n");
+    // strcat(buf, "<text_bs>Туалет");
+    // strcat(buf, "</text_bs>\r\n");
     strcat(buf, "</adr>\r\n");
     // ADR 2 END
 
