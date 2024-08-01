@@ -98,8 +98,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.5.0";
-    CFG.fwdate = "30.07.2024";
+    CFG.fw = "0.5.1";
+    CFG.fwdate = "1.08.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
@@ -255,7 +255,7 @@ void HandlerCore0(void *pvParameters)
     {
         Amplifier.loop();
 
-        if (HCONF.ADR == 2)
+        if (HCONF.ADR == 3)
         {
             while (Serial2.available() > 0)
             {
@@ -1256,7 +1256,7 @@ void ButtonHandler()
         }
         STATE.I2C_Block = false;
         break;
-    case 2:
+    case 3:
         STATE.I2C_Block = true;
         btn2.tick();
         btn3.tick();

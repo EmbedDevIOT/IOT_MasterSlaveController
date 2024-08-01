@@ -20,12 +20,12 @@ void RS485_ReadADR()
     else if (digitalRead(SW1) && !digitalRead(SW2))
     {
         HCONF.ADR = 2;
-        pinMode(DE_RE, OUTPUT);
-        digitalWrite(DE_RE, LOW);
     }
     else if (!digitalRead(SW1) && !digitalRead(SW2))
     {
         HCONF.ADR = 3;
+        pinMode(DE_RE, OUTPUT);
+        digitalWrite(DE_RE, LOW);
     }
 
     Serial.print("\r\n");
