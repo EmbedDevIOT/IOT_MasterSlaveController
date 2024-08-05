@@ -336,6 +336,7 @@ void SystemInit(void)
   STATE.CurDebug = false;
   STATE.WiFiEnable = true;
   STATE.TTS = false;   // Flag Start Time Speech
+  STATE.DSWC = false;  // Flag Start WC Speech
   STATE.DSTS1 = false; // Flag Start WC_1 Speech
   STATE.DSTS2 = false; // Flag Start WC_2 Speech
   STATE.VolumeUPD = false;
@@ -406,7 +407,14 @@ void DebugInfo()
     Serial.println(message);
     sprintf(message, "T1: %0.1f T2: %0.1f", HCONF.dsT1, HCONF.dsT2);
     Serial.println(message);
-    sprintf(message, "WC_STAT: %d", STATE.WC);
+    if (HCONF.WCGS == 1)
+    {
+      sprintf(message, "WC_STAT: %d", STATE.StateWC1);
+    }else
+    {
+      sprintf(message, "WC_STAT: %d", STATE.StateWC2);
+    }
+
     Serial.println(message);
 
     if (HCONF.ADR == 1)
@@ -466,11 +474,12 @@ void SystemFactoryReset()
   CFG.MK4 = 0;
 
   HCONF.bright = 90;
-  HCONF.volume = 13;
+  HCONF.volume = 21;
   HCONF.T1_offset = 0;
   HCONF.T2_offset = 0;
   HCONF.WCL = NORMAL;
   HCONF.WCSS = SENSOR_CLOSE;
+  HCONF.WCGS = 1;
 
   STATE.WiFiEnable = true;
 

@@ -1087,7 +1087,16 @@ void Send_BSdata()
     strcat(buf, "</color_temp_out>\r\n");
     strcat(buf, "<color_route>");
     memset(buf_col, 0, 9);
-    sprintf(buf_col, "%00006X", col_wc1.hex);
+    
+    if (HCONF.WCGS == 1)
+    {
+        sprintf(buf_col, "%00006X", col_wc1.hex);
+    }
+    else
+    {
+        sprintf(buf_col, "%00006X", col_wc2.hex);
+    }
+
     strcat(buf, buf_col);
     strcat(buf, "</color_route>\r\n");
     // strcat(buf, "<color_speed>FF0000");

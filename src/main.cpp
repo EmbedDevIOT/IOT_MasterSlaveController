@@ -7,6 +7,7 @@
 #include "HTTP.h"
 
 #define DEBUG // Debug control ON
+#define I2S_MCLKPIN 0
 //======================================================================
 
 //=========================== GLOBAL VARIABLES =========================
@@ -98,8 +99,8 @@ static uint8_t DS_dim(uint8_t i)
 //=======================       S E T U P       =========================
 void setup()
 {
-    CFG.fw = "0.5.1";
-    CFG.fwdate = "1.08.2024";
+    CFG.fw = "0.5.2";
+    CFG.fwdate = "5.08.2024";
 
     Serial.begin(UARTSpeed);
     Serial2.begin(115200, SERIAL_8N1, RX1_PIN, TX1_PIN);
@@ -124,8 +125,9 @@ void setup()
     // DIP SWITCH pins init
     pinMode(SW1, INPUT_PULLUP);
     pinMode(SW2, INPUT_PULLUP);
-    RS485_ReadADR();
 
+    RS485_ReadADR();
+    // HCONF.ADR = 1;
     // RTC init
     RTC.begin();
     if (RTC.lostPower())
@@ -176,6 +178,8 @@ void setup()
     }
 
     Amplifier.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+    Amplifier.i2s_mclk_pin_select(I2S_MCLKPIN);
+
     Amplifier.setVolume(HCONF.volume);
     Serial.println(F("DAC PCM Amplifier...Done"));
 
@@ -235,7 +239,7 @@ void setup()
 //=======================        L O O P        =========================
 void loop()
 {
-    // HTTP Handling (RSADR = 1 and WiFi = ON)
+    // HTTP Handling RSADR = 1 and WiFi = ON
     if ((HCONF.ADR == 1) && (STATE.WiFiEnable))
     {
         HandleClient();
@@ -314,17 +318,24 @@ void HandlerCore0(void *pvParameters)
             STATE.TTS = false;
         }
 
-        if (STATE.DSTS1)
-        {
-            Tell_me_DoorState(STATE.StateWC1);
-            STATE.DSTS1 = false;
-        }
         // Озвучка статуса туалета
-        if (STATE.DSTS2)
+        if (STATE.DSWC)
         {
             Tell_me_DoorState(STATE.WC);
-            STATE.DSTS2 = false;
+            STATE.DSWC = false;
         }
+
+        // if (STATE.DSTS1)
+        // {
+        //     Tell_me_DoorState(STATE.StateWC1);
+        //     STATE.DSTS1 = false;
+        // }
+        // // Озвучка статуса туалета
+        // if (STATE.DSTS2)
+        // {
+        //     Tell_me_DoorState(STATE.WC);
+        //     STATE.DSTS2 = false;
+        // }
 
         if (STATE.VolumeUPD)
         {
@@ -478,17 +489,18 @@ void ButtonHandler()
         btn3.tick();
         btn4.tick();
         btn5.tick();
+
         // Click Button 1 Handling (+)
         if (btn1.click())
         {
-            Serial.printf(" BTN 1 Click \r\n");
+            Serial.printf("BTN 1 Click \r\n");
 
             if (menu == IDLE)
             {
                 int hour = Clock.hour;
-                hour++;
-                if (hour > 23)
-                    hour = 0;
+                hour--;
+                if (hour < 0)
+                    hour = 23;
                 Clock.hour = hour;
                 RTC.setTime(Clock);
                 Serial.printf("Hour: %d \n\r", Clock.hour);
@@ -1240,14 +1252,14 @@ void ButtonHandler()
         // Click Button 5 Handling (-)
         if (btn5.click())
         {
-            Serial.printf(" BTN 5 Click \r\n");
+            Serial.printf("BTN 5 Click \r\n");
             // Hour --
             if (menu == IDLE)
             {
                 int hour = Clock.hour;
-                hour--;
-                if (hour < 0)
-                    hour = 23;
+                hour++;
+                if (hour > 23)
+                    hour = 0;
                 Clock.hour = hour;
                 RTC.setTime(Clock);
                 Serial.printf("Hour: %d \n\r", Clock.hour);
@@ -1255,6 +1267,8 @@ void ButtonHandler()
             }
         }
         STATE.I2C_Block = false;
+        break;
+    case 2:
         break;
     case 3:
         STATE.I2C_Block = true;
@@ -1266,21 +1280,15 @@ void ButtonHandler()
         {
             STATE.TTS = true;
         }
-        // Click Button 3 Handling (DTS) WC1
-        if (btn3.click())
-        {
-            // STATE.DSTS1 = true;
-        }
         // Click Button 4 Handling (DTS) WC2
         if (btn4.click())
         {
-            STATE.DSTS2 = true;
+            STATE.DSWC = true;
         }
         STATE.I2C_Block = false;
         // xSemaphoreGive(i2c_mutex);
         break;
-    case 3:
-        break;
+
     default:
         break;
     }

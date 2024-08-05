@@ -56,6 +56,7 @@
 #define I2S_DOUT 27
 #define I2S_BCLK 26
 #define I2S_LRC 25
+#define I2S_SCK 28
 // UART 1  - RS485 -
 #define RS_SERIAL1
 #ifdef RS_SERIAL1
@@ -242,9 +243,9 @@ struct HardwareConfig
 {
   uint8_t ADR = 0;          // RS_ADR
   int8_t WCL = 0;           // WC_STATE_LOGIQ
-  uint8_t WCGS = 0;         // WC_GET_SIGNAL
+  uint8_t WCGS = 1;         // WC_GET_SIGNAL
   uint8_t WCSS = 0;         // WC_SENSOR_SIGNAL
-  uint8_t volume = 50;      // Volume  1...21
+  uint8_t volume = 21;      // Volume  1...21
   int8_t bright = 70;       // Led Brightness 
   float dsT1 = 0.0;         // Temperature T1 
   int8_t T1_offset = 0;     // Temperature Offset T1 sensor
@@ -273,6 +274,7 @@ struct Flag
   bool CurDebug : 1;
   bool WiFiEnable : 1;  
   bool TTS : 1;        // Time to speech
+  bool DSWC : 1;       // WC Door State to speech
   bool DSTS1 : 1;      // WC 1 DoorState to speech
   bool DSTS2 : 1;      // WC 2 DoorState to speech
   bool VolumeUPD : 1;  // Volume update
