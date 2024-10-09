@@ -393,12 +393,12 @@ void DebugInfo()
 
     Serial.println(F("!!!!!!!!!!!!!!  DEBUG INFO  !!!!!!!!!!!!!!!!!!"));
 
-    // sprintf(message, "StaticUPD: %0d CNT: %0d", STATE.StaticUPD, STATE.cnt_Supd);
-    // Serial.println(message);
-    // sprintf(message, "CAR_NUM: %d HideMode: %d", UserText.carnum, UserText.hide_t);
-    // Serial.println(message);
-    // Serial.printf("Brightness:");
-    // Serial.println(HCONF.bright);
+    sprintf(message, "StaticUPD: %0d CNT: %0d", STATE.StaticUPD, STATE.cnt_Supd);
+    Serial.println(message);
+    sprintf(message, "CAR_NUM: %d HideMode: %d", UserText.carnum, UserText.hide_t);
+    Serial.println(message);
+    Serial.printf("Brightness:");
+    Serial.println(HCONF.bright);
     sprintf(message, "GMT: %d", CFG.gmt);
     Serial.println(message);
     sprintf(message, "RTC Time: %02d:%02d:%02d", Clock.hour, Clock.minute, Clock.second);
@@ -407,10 +407,14 @@ void DebugInfo()
     Serial.println(message);
     sprintf(message, "T1: %0.1f T2: %0.1f", HCONF.dsT1, HCONF.dsT2);
     Serial.println(message);
+    sprintf(message, "Get_WC_from: %d ", HCONF.WCGS);
+    Serial.println(message);
+
     if (HCONF.WCGS == 1)
     {
       sprintf(message, "WC_STAT: %d", STATE.StateWC1);
-    }else
+    }
+    else
     {
       sprintf(message, "WC_STAT: %d", STATE.StateWC2);
     }
@@ -423,7 +427,11 @@ void DebugInfo()
       Serial.println(message);
       sprintf(message, "WC1 | Sensor: %d State %d", STATE.SensWC1, STATE.StateWC1);
       Serial.println(message);
+      sprintf(message, "Color_WC1 %00006X", col_wc1.hex);
+      Serial.println(message);
       sprintf(message, "WC2 | Sensor: %d State %d", STATE.SensWC2, STATE.StateWC2);
+      Serial.println(message);
+      sprintf(message, "Color_WC2 %00006X", col_wc2.hex);
       Serial.println(message);
     }
     sprintf(message, "VOL: %d", HCONF.volume);
